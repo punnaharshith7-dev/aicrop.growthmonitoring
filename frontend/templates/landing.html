@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Crop Growth Monitoring — Precision AgTech SaaS</title>
+  <meta name="description" content="AI-powered precision agriculture platform for crop health monitoring, leaf disease detection, yield prediction, and environmental IoT tracking.">
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌱</text></svg>">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+
+  <style>
+    body { background: #ffffff; }
+
+    /* Hero Section */
+    .saas-hero {
+      background: linear-gradient(135deg, #06170e 0%, #0a2215 50%, #0d2818 100%);
+      color: #ffffff;
+      padding: 120px 0 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    .saas-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 75% 25%, rgba(34, 197, 94, 0.15) 0%, transparent 45%),
+                  radial-gradient(circle at 20% 75%, rgba(132, 204, 22, 0.12) 0%, transparent 45%);
+      pointer-events: none;
+    }
+
+    .hero-badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.35);
+      color: #86efac;
+      border-radius: var(--radius-pill);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 24px;
+    }
+
+    .hero-title-gradient {
+      font-size: clamp(2.5rem, 5.5vw, 4.2rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    .hero-title-gradient span {
+      background: linear-gradient(135deg, #4ade80 0%, #84cc16 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-lead {
+      font-size: 1.15rem;
+      color: rgba(255, 255, 255, 0.75);
+      line-height: 1.6;
+      max-width: 660px;
+      margin: 0 auto 32px;
+    }
+
+    /* Dashboard UI Mockup */
+    .dashboard-mockup-wrapper {
+      max-width: 1040px;
+      margin: 40px auto 0;
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 8px;
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .mockup-inner {
+      background: #f8fafc;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+    }
+
+    /* Feature Cards */
+    .feature-box {
+      background: #ffffff;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-color);
+      padding: 32px 28px;
+      transition: var(--transition);
+      height: 100%;
+    }
+    .feature-box:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-4px);
+      border-color: #cbd5e1;
+    }
+    .feature-icon-badge {
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      margin-bottom: 20px;
+    }
+
+    /* Public Topbar */
+    .public-nav {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Public Top Navigation -->
+<nav class="public-nav">
+  <a href="{{ url_for('landing') }}" class="d-flex align-items-center gap-2 text-white text-decoration-none">
+    <div style="width:40px;height:40px;background:linear-gradient(135deg,#22c55e,#15803d);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🌱</div>
+    <span class="fw-bold fs-5" style="letter-spacing:-0.02em;">AI Crop Monitor</span>
+  </a>
+
+  <div class="d-flex align-items-center gap-3">
+    {% if current_user.is_authenticated %}
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">
+      <i class="bi bi-grid-fill"></i> Go to Dashboard
+    </a>
+    {% else %}
+    <a href="{{ url_for('auth.login') }}" class="btn btn-outline" style="border-color:rgba(255,255,255,0.25);color:#fff;">
+      Sign In
+    </a>
+    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">
+      Get Started Free
+    </a>
+    {% endif %}
+  </div>
+</nav>
+
+<!-- Hero Section -->
+<section class="saas-hero text-center">
+  <div class="container position-relative" style="z-index:2;">
+    <div class="hero-badge-pill">
+      <i class="bi bi-cpu-fill"></i> Enterprise Agricultural Intelligence
+    </div>
+
+    <h1 class="hero-title-gradient">
+      Precision Farm Intelligence,<br>
+      <span>Powered by Computer Vision & IoT</span>
+    </h1>
+
+    <p class="hero-lead">
+      Real-time crop phenology monitoring, deep learning leaf pathogen detection, IoT micro-climate telemetry, and harvest yield prediction in a single modern SaaS platform.
+    </p>
+
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+      {% if current_user.is_authenticated %}
+      <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary btn-lg px-4 py-3 fs-6">
+        <i class="bi bi-grid-fill"></i> Launch Live Dashboard
+      </a>
+      {% else %}
+      <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-4 py-3 fs-6">
+        <i class="bi bi-arrow-right-circle"></i> Start Monitoring Free
+      </a>
+      <a href="{{ url_for('auth.login') }}" class="btn btn-outline btn-lg px-4 py-3 fs-6" style="border-color:rgba(255,255,255,0.3);color:#fff;">
+        Farmer Sign In
+      </a>
+      {% endif %}
+    </div>
+
+    <!-- Live Interactive UI Mockup -->
+    <div class="dashboard-mockup-wrapper text-start">
+      <div class="mockup-inner p-3 p-md-4">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+          <div class="d-flex align-items-center gap-2">
+            <span style="width:12px;height:12px;border-radius:50%;background:#ef4444;display:inline-block;"></span>
+            <span style="width:12px;height:12px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
+            <span style="width:12px;height:12px;border-radius:50%;background:#10b981;display:inline-block;"></span>
+            <span class="ms-2 fw-semibold text-muted" style="font-size:0.75rem;">AI Crop Growth Monitoring — SaaS Control Center</span>
+          </div>
+          <span class="badge badge-success"><i class="bi bi-broadcast me-1"></i> Live IoT Streaming</span>
+        </div>
+
+        <!-- Mockup Content: Mini Stats & Crops Grid -->
+        <div class="row g-3 mb-3">
+          <div class="col-4 col-md">
+            <div class="p-2 rounded-3 border bg-white text-center">
+              <span class="text-muted d-block" style="font-size:0.7rem;font-weight:700;">TOTAL CROPS</span>
+              <strong class="fs-5 text-success">12 Fields</strong>
+            </div>
+          </div>
+          <div class="col-4 col-md">
+            <div class="p-2 rounded-3 border bg-white text-center">
+              <span class="text-muted d-block" style="font-size:0.7rem;font-weight:700;">HEALTH RATIO</span>
+              <strong class="fs-5 text-success">91.6%</strong>
+            </div>
+          </div>
+          <div class="col-4 col-md">
+            <div class="p-2 rounded-3 border bg-white text-center">
+              <span class="text-muted d-block" style="font-size:0.7rem;font-weight:700;">SOIL MOISTURE</span>
+              <strong class="fs-5 text-info">52.4%</strong>
+            </div>
+          </div>
+          <div class="col-6 col-md">
+            <div class="p-2 rounded-3 border bg-white text-center">
+              <span class="text-muted d-block" style="font-size:0.7rem;font-weight:700;">TEMPERATURE</span>
+              <strong class="fs-5 text-danger">26.5°C</strong>
+            </div>
+          </div>
+          <div class="col-6 col-md">
+            <div class="p-2 rounded-3 border bg-white text-center">
+              <span class="text-muted d-block" style="font-size:0.7rem;font-weight:700;">HARVEST FORECAST</span>
+              <strong class="fs-5 text-main">48.2 Tonnes</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sample Crops Illustration Bar -->
+        <div class="row g-2">
+          <div class="col-md-4">
+            <div class="p-2 rounded-3 border bg-white d-flex align-items-center gap-3">
+              <img src="{{ url_for('static', filename='images/crops/rice.svg') }}" style="width:48px;height:48px;border-radius:8px;object-fit:cover;" alt="Rice">
+              <div>
+                <strong class="d-block" style="font-size:0.85rem;">Paddy Sector 1</strong>
+                <span class="badge badge-success" style="font-size:0.65rem;">Tillering · 45%</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-2 rounded-3 border bg-white d-flex align-items-center gap-3">
+              <img src="{{ url_for('static', filename='images/crops/corn.svg') }}" style="width:48px;height:48px;border-radius:8px;object-fit:cover;" alt="Corn">
+              <div>
+                <strong class="d-block" style="font-size:0.85rem;">Maize Ridge A</strong>
+                <span class="badge badge-success" style="font-size:0.65rem;">Vegetative · 60%</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-2 rounded-3 border bg-white d-flex align-items-center gap-3">
+              <img src="{{ url_for('static', filename='images/crops/tomato.svg') }}" style="width:48px;height:48px;border-radius:8px;object-fit:cover;" alt="Tomato">
+              <div>
+                <strong class="d-block" style="font-size:0.85rem;">Tomato Greenhouse</strong>
+                <span class="badge badge-warning" style="font-size:0.65rem;">Fruiting · 80%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Core AgTech Feature Capabilities -->
+<section class="py-5" style="background:#f8fafc;">
+  <div class="container py-4">
+    <div class="text-center max-w-lg mx-auto mb-5" style="max-width:640px;margin-left:auto;margin-right:auto;">
+      <span class="badge badge-success mb-2 py-1 px-3">End-to-End AgTech Architecture</span>
+      <h2 class="fs-2 fw-bold text-main">Complete Autonomous Farm Intelligence</h2>
+      <p class="text-muted">Designed to maximize crop yields, detect diseases before symptoms become catastrophic, and prevent resource wastage.</p>
+    </div>
+
+    <div class="row g-4">
+      <!-- Feature 1 -->
+      <div class="col-md-6 col-lg-3">
+        <div class="feature-box">
+          <div class="feature-icon-badge" style="background:var(--primary-soft);color:var(--primary-dark);">
+            <i class="bi bi-flower1"></i>
+          </div>
+          <h3 class="fs-5 fw-bold mb-2">Crop Milestones</h3>
+          <p class="text-muted" style="font-size:0.875rem;">
+            Species-specific S-curve biological growth stage modeling with automatic days-to-harvest countdown and progress tracking.
+          </p>
+        </div>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="col-md-6 col-lg-3">
+        <div class="feature-box">
+          <div class="feature-icon-badge" style="background:var(--danger-soft);color:var(--danger-dark);">
+            <i class="bi bi-shield-check"></i>
+          </div>
+          <h3 class="fs-5 fw-bold mb-2">Vision Disease AI</h3>
+          <p class="text-muted" style="font-size:0.875rem;">
+            Deep learning computer vision for instantaneous foliar pathology classification across 16+ crop diseases with confidence ratings.
+          </p>
+        </div>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="col-md-6 col-lg-3">
+        <div class="feature-box">
+          <div class="feature-icon-badge" style="background:var(--info-soft);color:var(--info-dark);">
+            <i class="bi bi-broadcast"></i>
+          </div>
+          <h3 class="fs-5 fw-bold mb-2">Environmental IoT</h3>
+          <p class="text-muted" style="font-size:0.875rem;">
+            Continuous tracking of soil moisture, ambient temperature, humidity, and rainfall with rule-based automated irrigation alerts.
+          </p>
+        </div>
+      </div>
+
+      <!-- Feature 4 -->
+      <div class="col-md-6 col-lg-3">
+        <div class="feature-box">
+          <div class="feature-icon-badge" style="background:var(--warning-soft);color:var(--warning-dark);">
+            <i class="bi bi-graph-up-arrow"></i>
+          </div>
+          <h3 class="fs-5 fw-bold mb-2">Predictive Yield</h3>
+          <p class="text-muted" style="font-size:0.875rem;">
+            Machine learning regression algorithms forecast harvest yields per hectare based on soil types, rainfall, and nutrient applications.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="py-4 border-top" style="background:#ffffff;">
+  <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+    <div class="d-flex align-items-center gap-2">
+      <span class="fs-4">🌱</span>
+      <strong class="text-main">AI Crop Growth Monitoring</strong>
+      <span class="text-muted" style="font-size:0.8rem;">— Precision AgTech Dashboard</span>
+    </div>
+    <div style="font-size:0.85rem;color:var(--text-muted);">
+      III B.Tech CSE Project · Enterprise SaaS Architecture
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

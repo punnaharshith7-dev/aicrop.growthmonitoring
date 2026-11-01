@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block title %}Disease Scan History — AI Crop Growth Monitoring{% endblock %}
+{% block page_title %}Scan History{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+  <div>
+    <div class="d-flex align-items-center gap-2">
+      <h1>Diagnostic Scan History</h1>
+      <span class="badge badge-success">{{ detections|length }} Total Scans</span>
+    </div>
+    <p class="page-subtitle">Archive of all computer vision leaf health inspections and historical pathogen detections.</p>
+  </div>
+  <a href="{{ url_for('disease.detect') }}" class="btn btn-primary">
+    <i class="bi bi-camera"></i> Run New Scan
+  </a>
+</div>
+
+<!-- Search & Filtering Bar -->
+<div class="card mb-4 p-3 border">
+  <div class="row g-3 align-items-center">
+    <div class="col-md-6">
+      <div class="input-group">
+        <span class="input-group-icon"><i class="bi bi-search"></i></span>
+        <input type="text" id="scanSearchInput" class="form-control" placeholder="Search by disease name or crop..." oninput="filterScans()">
+      </div>
+    </div>
+    <div class="col-md-4">
+      <select id="scanStatusFilter" class="form-select" onchange="filterScans()">
+        <option value="">All Scan Results</option>
+        <option value="healthy">Healthy Only</option>
+        <option value="diseased">Diseased Only</option>
+      </select>
+    </div>
+    <div class="col-md-2 text-md-end">
+      <button class="btn btn-outline w-100 p-2" onclick="resetScanFilters()">
+        <i class="bi bi-arrow-counterclockwise"></i> Reset
+      </button>
+    </div>
+  </div>
+</div>
+
+{% if detections %}
+<div class="row g-3" id="scansContainer">
+  {% for d in detections %}
+  <div class="col-md-6 col-xl-4 scan-card-item"
+       data-name="{{ (d.disease_name or '')|lower }}"
+       data-crop="{{ (d.crop.crop_name if d.crop else '')|lower }}"
+       data-status="{{ 'healthy' if d.is_healthy else 'diseased' }}">
+    <div class="card h-100">
+      <div class="card-body p-3">
+        <div class="d-flex gap-3 align-items-center mb-3">
+          <div style="width:72px;height:72px;border-radius:12px;overflow:hidden;flex-shrink:0;background:#f8fafc;border:1px solid #e2e8f0;">
+            {% if d.image_path %}
+            <img src="{{ url_for('static', filename=d.image_path) }}"
+                 alt="Scan"
+                 style="width:100%;height:100%;object-fit:cover;"
+                 onerror="this.src='{{ url_for('static', filename='images/samples/sample_healthy_leaf.svg') }}'">
+            {% else %}
+            <div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted fs-3">🌿</div>
+            {% endif %}
+          </div>
+          <div class="flex-grow-1 min-width-0">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="badge {% if d.is_healthy %}badge-success{% else %}badge-danger{% endif %}">
+                {{ 'Healthy' if d.is_healthy else 'Diseased' }}
+              </span>
+              <span style="font-size:0.75rem;color:var(--text-muted);">
+                {{ d.detected_at.strftime('%d %b %Y') }}
+              </span>
+            </div>
+            <h4 class="fs-6 fw-bold text-main mb-1 text-truncate" title="{{ d.disease_name }}">{{ d.disease_name }}</h4>
+            <div style="font-size:0.8rem;color:var(--text-muted);">
+              Confidence: <strong class="{% if d.is_healthy %}text-success{% else %}text-danger{% endif %}">{{ '%.1f'|format(d.confidence or 0) }}%</strong>
+            </div>
+          </div>
+        </div>
+
+        {% if d.crop %}
+        <div class="p-2 rounded-2 mb-3 border text-truncate" style="background:#f8fafc;font-size:0.75rem;">
+          <i class="bi bi-link text-success me-1"></i> Crop: <strong>{{ d.crop.crop_name }}</strong> ({{ d.crop.crop_type|title }})
+        </div>
+        {% endif %}
+
+        <a href="{{ url_for('disease.result', detection_id=d.id) }}" class="btn btn-sm btn-outline w-100">
+          <i class="bi bi-file-earmark-medical"></i> View Diagnostic Report
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div id="noScanResultsMsg" class="empty-state d-none">
+  <div class="empty-icon"><i class="bi bi-funnel"></i></div>
+  <h3>No matching scans found</h3>
+  <p>Try adjusting your search criteria or resetting the status filter.</p>
+</div>
+
+{% else %}
+<div class="card p-5 text-center">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="bi bi-camera"></i></div>
+    <h3>No disease scans logged</h3>
+    <p>Upload your first leaf image to begin diagnosing crop conditions.</p>
+    <a href="{{ url_for('disease.detect') }}" class="btn btn-primary mt-3">Run Leaf Scan</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterScans() {
+  const query = document.getElementById('scanSearchInput').value.toLowerCase().trim();
+  const status = document.getElementById('scanStatusFilter').value;
+
+  const items = document.querySelectorAll('.scan-card-item');
+  let visibleCount = 0;
+
+  items.forEach(item => {
+    const name = item.getAttribute('data-name') || '';
+    const crop = item.getAttribute('data-crop') || '';
+    const itemStatus = item.getAttribute('data-status') || '';
+
+    const matchesQuery = !query || name.includes(query) || crop.includes(query);
+    const matchesStatus = !status || itemStatus === status;
+
+    if (matchesQuery && matchesStatus) {
+      item.style.display = '';
+      visibleCount++;
+    } else {
+      item.style.display = 'none';
+    }
+  });
+
+  const noMsg = document.getElementById('noScanResultsMsg');
+  if (noMsg) {
+    if (visibleCount === 0) noMsg.classList.remove('d-none');
+    else noMsg.classList.add('d-none');
+  }
+}
+
+function resetScanFilters() {
+  document.getElementById('scanSearchInput').value = '';
+  document.getElementById('scanStatusFilter').value = '';
+  filterScans();
+}
+</script>
+{% endblock %}

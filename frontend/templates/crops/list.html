@@ -1,0 +1,436 @@
+{% extends 'base.html' %}
+{% block title %}Crop Monitoring Hub — AI Crop Growth Monitoring{% endblock %}
+{% block page_title %}Crop Growth Telemetry{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+  <div>
+    <div class="d-flex align-items-center gap-2">
+      <h1>Crop Monitoring Hub</h1>
+      <span class="badge badge-success">{{ crop_data|length }} Monitored Fields</span>
+    </div>
+    <p class="page-subtitle">Track biological growth milestones across all 6 phases, health conditions, and expected harvest dates.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <div class="btn-group" role="group">
+      <button type="button" class="btn btn-outline active" id="btnGridView" onclick="setViewMode('grid')" title="Grid View">
+        <i class="bi bi-grid-fill"></i>
+      </button>
+      <button type="button" class="btn btn-outline" id="btnTableView" onclick="setViewMode('table')" title="Table View">
+        <i class="bi bi-list-ul"></i>
+      </button>
+    </div>
+    <a href="{{ url_for('crops.add_crop') }}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> Add New Crop Field
+    </a>
+  </div>
+</div>
+
+{% if summary_stats %}
+<!-- Farm Overview Analytics Metric Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card p-3 h-100 border-start border-4 border-success">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted" style="font-size:0.75rem;font-weight:700;text-transform:uppercase;">Monitored Fields</span>
+          <h3 class="fs-3 fw-bold mb-0 text-main mt-1">{{ summary_stats.total_crops }}</h3>
+        </div>
+        <div style="width:48px;height:48px;border-radius:12px;background:#f0fdf4;color:#16a34a;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">
+          <i class="bi bi-flower1"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="card p-3 h-100 border-start border-4 border-primary">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted" style="font-size:0.75rem;font-weight:700;text-transform:uppercase;">Total Cultivated Area</span>
+          <h3 class="fs-3 fw-bold mb-0 text-primary mt-1">{{ summary_stats.total_area }} <small class="fs-6 text-muted">ha</small></h3>
+        </div>
+        <div style="width:48px;height:48px;border-radius:12px;background:#eff6ff;color:#3b82f6;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">
+          <i class="bi bi-bounding-box-circles"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="card p-3 h-100 border-start border-4 border-warning">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted" style="font-size:0.75rem;font-weight:700;text-transform:uppercase;">Approaching Harvest</span>
+          <h3 class="fs-3 fw-bold mb-0 text-warning mt-1">{{ summary_stats.approaching_harvest }} <small class="fs-6 text-muted">fields</small></h3>
+        </div>
+        <div style="width:48px;height:48px;border-radius:12px;background:#fffbeb;color:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">
+          <i class="bi bi-basket"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="card p-3 h-100 border-start border-4 border-info">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted" style="font-size:0.75rem;font-weight:700;text-transform:uppercase;">Active Stage Focus</span>
+          <h3 class="fs-4 fw-bold mb-0 text-info mt-1">
+            {% set active_stages = [] %}
+            {% for st, count in summary_stats.stage_counts.items() if count > 0 %}
+              {% if loop.first %}{{ st }}{% endif %}
+            {% else %}
+              Vegetative
+            {% endfor %}
+          </h3>
+        </div>
+        <div style="width:48px;height:48px;border-radius:12px;background:#f0f9ff;color:#0ea5e9;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">
+          <i class="bi bi-bezier2"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Search & Filtering Bar -->
+<div class="card mb-4 p-3 border">
+  <div class="row g-3 align-items-center">
+    <div class="col-md-5">
+      <div class="input-group">
+        <span class="input-group-icon"><i class="bi bi-search"></i></span>
+        <input type="text" id="cropSearchInput" class="form-control" placeholder="Search by crop name, variety, or location..." oninput="filterCrops()">
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <select id="cropTypeFilter" class="form-select" onchange="filterCrops()">
+        <option value="">All Crop Types</option>
+        {% for ct in crop_types %}
+        <option value="{{ ct }}">{{ crop_profiles[ct].display_name if ct in crop_profiles else ct|title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-3">
+      <select id="cropHealthFilter" class="form-select" onchange="filterCrops()">
+        <option value="">All Health Statuses</option>
+        <option value="Healthy">Healthy Only</option>
+        <option value="Diseased">Diseased Only</option>
+        <option value="At Risk">At Risk Only</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-1 text-md-end">
+      <button class="btn btn-outline w-100 p-2" onclick="resetFilters()" title="Reset Filters">
+        <i class="bi bi-arrow-counterclockwise"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+{% if crop_data %}
+<!-- ════════════ GRID VIEW ════════════ -->
+<div id="cropsGridView" class="row g-4">
+  {% for item in crop_data %}
+  {% set crop = item.crop %}
+  {% set g = item.growth %}
+  <div class="col-md-6 col-xl-4 crop-card-item"
+       data-name="{{ crop.crop_name|lower }}"
+       data-variety="{{ (crop.crop_variety or '')|lower }}"
+       data-type="{{ (crop.crop_type or 'other')|lower }}"
+       data-location="{{ (crop.location or '')|lower }}"
+       data-health="{{ crop.health_status }}">
+    <div class="crop-card h-100 d-flex flex-column">
+      <!-- Crop Image Header -->
+      <div class="crop-cover-container">
+        <img src="{{ url_for('static', filename='images/crops/' ~ (crop.crop_type|lower if crop.crop_type else 'other') ~ '.svg') }}"
+             alt="{{ crop.crop_name }}"
+             class="crop-cover-img"
+             onerror="this.src='{{ url_for('static', filename='images/crops/other.svg') }}'">
+        
+        <div class="crop-type-chip">
+          <i class="bi bi-tag-fill text-success"></i> {{ crop.crop_type|title or 'Other' }}
+        </div>
+
+        <div class="crop-cover-badge">
+          <span class="badge {% if crop.health_status=='Healthy' %}badge-success{% elif crop.health_status=='Diseased' %}badge-danger{% else %}badge-warning{% endif %}">
+            <i class="bi bi-{% if crop.health_status=='Healthy' %}check-circle-fill{% elif crop.health_status=='Diseased' %}exclamation-triangle-fill{% else %}shield-exclamation{% endif %}"></i>
+            {{ crop.health_status }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Card Content -->
+      <div class="crop-card-content flex-grow-1">
+        <div class="d-flex justify-content-between align-items-start mb-1">
+          <div class="min-width-0">
+            <a href="{{ url_for('crops.crop_detail', crop_id=crop.id) }}" class="crop-card-title text-main text-decoration-none fw-bold text-truncate d-block">
+              {{ crop.crop_name }}
+            </a>
+            {% if crop.crop_variety %}
+            <span class="badge badge-secondary py-1 px-2 mt-1" style="font-size:0.75rem;">
+              <i class="bi bi-seedling text-success me-1"></i> {{ crop.crop_variety }}
+            </span>
+            {% endif %}
+          </div>
+          {% if crop.field_area %}
+          <span class="badge badge-info ms-2" style="font-size:0.75rem;">
+            <i class="bi bi-bounding-box me-1"></i> {{ crop.field_area }} ha
+          </span>
+          {% endif %}
+        </div>
+
+        {% if crop.location %}
+        <div style="font-size:0.785rem;color:var(--text-muted);margin:6px 0 12px;">
+          <i class="bi bi-geo-alt-fill text-success"></i> {{ crop.location }}
+        </div>
+        {% endif %}
+
+        <!-- Growth Progress & 6 Stages Pill Row -->
+        <div class="crop-progress-section mt-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fw-bold text-main" style="font-size:0.825rem;">
+              <i class="bi bi-clock-history text-success me-1"></i> {{ g.current_stage }} Phase
+            </span>
+            <span class="fw-bold text-success" style="font-size:0.825rem;">{{ g.progress }}%</span>
+          </div>
+          
+          <div class="progress" style="height:8px;border-radius:4px;background:#e2e8f0;margin-bottom:10px;">
+            <div class="progress-bar bg-success"
+                 role="progressbar"
+                 style="width:{{ g.progress }}%;"
+                 aria-valuenow="{{ g.progress }}"
+                 aria-valuemin="0"
+                 aria-valuemax="100"></div>
+          </div>
+
+          <!-- 6-Stage Pills Row -->
+          <div class="d-flex gap-1 overflow-x-auto pb-1" style="scrollbar-width:none;">
+            {% for stage in g.stages %}
+            <span class="badge py-1 px-2 {% if stage.status == 'completed' %}badge-success{% elif stage.status == 'current' %}badge-warning{% else %}badge-secondary text-muted{% endif %}"
+                  style="font-size:0.65rem;flex:1;text-align:center;white-space:nowrap;"
+                  title="{{ stage.name }} ({{ stage.duration_days }} days)">
+              {{ stage.name }}
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Telemetry & Dates Grid -->
+        <div class="crop-meta-grid mt-3">
+          <div class="crop-meta-item">
+            <div class="meta-label">Sown Date</div>
+            <div class="meta-val">{{ crop.planting_date.strftime('%d %b %Y') }}</div>
+          </div>
+          <div class="crop-meta-item">
+            <div class="meta-label">Est. Harvest</div>
+            <div class="meta-val text-success">{{ g.harvest_date.strftime('%d %b %Y') }}</div>
+          </div>
+          <div class="crop-meta-item">
+            <div class="meta-label">Elapsed</div>
+            <div class="meta-val">{{ g.elapsed_days }} / {{ g.total_days }}d</div>
+          </div>
+          <div class="crop-meta-item">
+            <div class="meta-label">Remaining</div>
+            <div class="meta-val text-info">{{ g.days_remaining }} days</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Action Footer -->
+      <div class="crop-card-footer mt-auto">
+        <a href="{{ url_for('crops.crop_detail', crop_id=crop.id) }}" class="btn btn-sm btn-primary flex-grow-1">
+          <i class="bi bi-speedometer2"></i> Telemetry & Stages
+        </a>
+        <a href="{{ url_for('crops.edit_crop', crop_id=crop.id) }}" class="btn btn-sm btn-outline" title="Edit Parameters">
+          <i class="bi bi-pencil"></i>
+        </a>
+        <form method="POST" action="{{ url_for('crops.delete_crop', crop_id=crop.id) }}" style="display:inline;" onsubmit="return confirm('Delete this crop field record?')">
+          <button type="submit" class="btn btn-sm btn-danger-soft" title="Delete Crop">
+            <i class="bi bi-trash"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ════════════ TABLE VIEW ════════════ -->
+<div id="cropsTableView" class="card d-none">
+  <div class="table-container border-0">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>Crop Field</th>
+          <th>Variety</th>
+          <th>Type</th>
+          <th>Planting Date</th>
+          <th>Growth Stage</th>
+          <th>Progress</th>
+          <th>Health</th>
+          <th>Target Harvest</th>
+          <th>Area</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in crop_data %}
+        {% set crop = item.crop %}
+        {% set g = item.growth %}
+        <tr class="crop-card-item"
+            data-name="{{ crop.crop_name|lower }}"
+            data-variety="{{ (crop.crop_variety or '')|lower }}"
+            data-type="{{ (crop.crop_type or 'other')|lower }}"
+            data-location="{{ (crop.location or '')|lower }}"
+            data-health="{{ crop.health_status }}">
+          <td>
+            <div class="d-flex align-items-center gap-3">
+              <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;background:#f8fafc;border:1px solid #e2e8f0;flex-shrink:0;">
+                <img src="{{ url_for('static', filename='images/crops/' ~ (crop.crop_type|lower if crop.crop_type else 'other') ~ '.svg') }}"
+                     alt="{{ crop.crop_name }}"
+                     style="width:100%;height:100%;object-fit:cover;"
+                     onerror="this.src='{{ url_for('static', filename='images/crops/other.svg') }}'">
+              </div>
+              <div>
+                <a href="{{ url_for('crops.crop_detail', crop_id=crop.id) }}" class="fw-bold text-main d-block text-decoration-none">
+                  {{ crop.crop_name }}
+                </a>
+                <span class="text-muted" style="font-size:0.75rem;">{{ crop.location or 'General Field' }}</span>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="badge badge-secondary">{{ crop.crop_variety or 'Standard' }}</span>
+          </td>
+          <td class="text-capitalize">{{ crop.crop_type or 'Other' }}</td>
+          <td>{{ crop.planting_date.strftime('%d %b %Y') }}</td>
+          <td>
+            <span class="badge badge-info">{{ g.current_stage }}</span>
+          </td>
+          <td>
+            <div style="width:120px;">
+              <div class="d-flex justify-content-between mb-1" style="font-size:0.75rem;">
+                <span class="fw-bold text-success">{{ g.progress }}%</span>
+                <span class="text-muted">{{ g.days_remaining }}d left</span>
+              </div>
+              <div class="progress" style="height:6px;border-radius:3px;background:#e2e8f0;">
+                <div class="progress-bar bg-success" style="width:{{ g.progress }}%;"></div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="badge {% if crop.health_status=='Healthy' %}badge-success{% elif crop.health_status=='Diseased' %}badge-danger{% else %}badge-warning{% endif %}">
+              {{ crop.health_status }}
+            </span>
+          </td>
+          <td>{{ g.harvest_date.strftime('%d %b %Y') }}</td>
+          <td>{{ crop.field_area ~ ' ha' if crop.field_area else '—' }}</td>
+          <td class="text-end">
+            <div class="d-flex justify-content-end gap-1">
+              <a href="{{ url_for('crops.crop_detail', crop_id=crop.id) }}" class="btn btn-sm btn-outline" title="Details">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{{ url_for('crops.edit_crop', crop_id=crop.id) }}" class="btn btn-sm btn-outline" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <form method="POST" action="{{ url_for('crops.delete_crop', crop_id=crop.id) }}" style="display:inline;" onsubmit="return confirm('Delete this crop?')">
+                <button type="submit" class="btn btn-sm btn-danger-soft" title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="noResultsMsg" class="empty-state d-none py-5">
+  <div class="empty-icon"><i class="bi bi-funnel"></i></div>
+  <h3>No matching crops found</h3>
+  <p>Try clearing or adjusting your search filters to find what you're looking for.</p>
+  <button class="btn btn-sm btn-outline mt-3" onclick="resetFilters()">Reset All Filters</button>
+</div>
+
+{% else %}
+<div class="card p-5 text-center">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="bi bi-flower1"></i></div>
+    <h3>No crops registered yet</h3>
+    <p>Begin monitoring by registering your first crop field with variety, planting date, and land area.</p>
+    <a href="{{ url_for('crops.add_crop') }}" class="btn btn-primary btn-lg mt-3">
+      <i class="bi bi-plus-circle"></i> Add Your First Crop
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function setViewMode(mode) {
+  const gridView = document.getElementById('cropsGridView');
+  const tableView = document.getElementById('cropsTableView');
+  const btnGrid = document.getElementById('btnGridView');
+  const btnTable = document.getElementById('btnTableView');
+
+  if (mode === 'grid') {
+    gridView?.classList.remove('d-none');
+    tableView?.classList.add('d-none');
+    btnGrid?.classList.add('active');
+    btnTable?.classList.remove('active');
+  } else {
+    gridView?.classList.add('d-none');
+    tableView?.classList.remove('d-none');
+    btnTable?.classList.add('active');
+    btnGrid?.classList.remove('active');
+  }
+}
+
+function filterCrops() {
+  const query = document.getElementById('cropSearchInput').value.toLowerCase().trim();
+  const type = document.getElementById('cropTypeFilter').value.toLowerCase();
+  const health = document.getElementById('cropHealthFilter').value;
+
+  const items = document.querySelectorAll('.crop-card-item');
+  let visibleCount = 0;
+
+  items.forEach(item => {
+    const name = item.getAttribute('data-name') || '';
+    const variety = item.getAttribute('data-variety') || '';
+    const cropType = item.getAttribute('data-type') || '';
+    const loc = item.getAttribute('data-location') || '';
+    const itemHealth = item.getAttribute('data-health') || '';
+
+    const matchesQuery = !query || name.includes(query) || variety.includes(query) || cropType.includes(query) || loc.includes(query);
+    const matchesType = !type || cropType === type;
+    const matchesHealth = !health || itemHealth === health;
+
+    if (matchesQuery && matchesType && matchesHealth) {
+      item.style.display = '';
+      visibleCount++;
+    } else {
+      item.style.display = 'none';
+    }
+  });
+
+  const noResults = document.getElementById('noResultsMsg');
+  if (noResults) {
+    if (visibleCount === 0) {
+      noResults.classList.remove('d-none');
+    } else {
+      noResults.classList.add('d-none');
+    }
+  }
+}
+
+function resetFilters() {
+  document.getElementById('cropSearchInput').value = '';
+  document.getElementById('cropTypeFilter').value = '';
+  document.getElementById('cropHealthFilter').value = '';
+  filterCrops();
+}
+</script>
+{% endblock %}

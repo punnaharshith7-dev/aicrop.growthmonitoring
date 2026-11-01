@@ -1,0 +1,538 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — AI Crop Growth Monitoring{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Executive Welcome Banner -->
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+  <div>
+    <h1>Welcome, {{ current_user.full_name or current_user.username }} 👋</h1>
+    <p class="page-subtitle">Here is the real-time operational status and telemetry for your farm.</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('disease.detect') }}" class="btn btn-outline">
+      <i class="bi bi-camera"></i> Scan Disease
+    </a>
+    <a href="{{ url_for('crops.add_crop') }}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> Add New Crop
+    </a>
+  </div>
+</div>
+
+<!-- ── Responsive KPI Stat Cards ── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg">
+    <div class="stat-card">
+      <div class="stat-icon green"><i class="bi bi-flower1"></i></div>
+      <div>
+        <div class="stat-value">{{ total_crops }}</div>
+        <div class="stat-label">Active Crops</div>
+        <div class="stat-trend up"><i class="bi bi-shield-check"></i> Monitored</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg">
+    <div class="stat-card">
+      <div class="stat-icon accent"><i class="bi bi-check-circle-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ healthy_crops }}</div>
+        <div class="stat-label">Healthy Crops</div>
+        <div class="stat-trend up">
+          {% if total_crops > 0 %}
+            {{ '%.0f'|format((healthy_crops / total_crops) * 100) }}% optimal
+          {% else %}
+            —
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg">
+    <div class="stat-card">
+      <div class="stat-icon danger"><i class="bi bi-exclamation-triangle-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ diseased_crops }}</div>
+        <div class="stat-label">Needs Attention</div>
+        <div class="stat-trend down">
+          {% if diseased_crops > 0 %}Attention req.{% else %}No diseases{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg">
+    <div class="stat-card">
+      <div class="stat-icon warning"><i class="bi bi-shield-exclamation"></i></div>
+      <div>
+        <div class="stat-value">{{ total_detections }}</div>
+        <div class="stat-label">AI Scans</div>
+        <div class="stat-trend"><i class="bi bi-cpu"></i> Vision Model</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg">
+    <div class="stat-card">
+      <div class="stat-icon info"><i class="bi bi-graph-up-arrow"></i></div>
+      <div>
+        <div class="stat-value">{{ total_predictions }}</div>
+        <div class="stat-label">Yield Forecasts</div>
+        <div class="stat-trend"><i class="bi bi-bar-chart"></i> Predictive AI</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Charts Row ── -->
+<div class="row g-4 mb-4">
+  <!-- Environmental Sensor Telemetry & Chart -->
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header flex-wrap gap-2">
+        <div>
+          <h2 class="card-title">
+            <i class="bi bi-broadcast text-success"></i> Environmental Trends
+          </h2>
+          <span style="font-size:0.75rem;color:var(--text-muted);">IoT telemetry recorded over the last 7 days</span>
+        </div>
+        <div class="btn-group btn-group-sm" role="group">
+          <button type="button" class="btn btn-outline" id="btnSoil" onclick="switchChart('soil', this)">Soil Moisture</button>
+          <button type="button" class="btn btn-outline" id="btnTemp" onclick="switchChart('temp', this)">Temperature</button>
+          <button type="button" class="btn btn-outline" id="btnHumid" onclick="switchChart('humidity', this)">Humidity</button>
+          <button type="button" class="btn btn-outline" id="btnRain" onclick="switchChart('rainfall', this)">Rainfall</button>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if latest_env %}
+        <!-- Mini Telemetry Gauges -->
+        <div class="row g-2 mb-4">
+          <div class="col-6 col-md-3">
+            <div class="p-3 rounded-3" style="background:rgba(22, 163, 74, 0.08);border:1px solid rgba(22, 163, 74, 0.15);">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span style="font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Soil Moisture</span>
+                <i class="bi bi-moisture text-success"></i>
+              </div>
+              <div class="fs-4 fw-bold text-success">{{ latest_env.soil_moisture or '—' }}%</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);">Optimal: 35–65%</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 rounded-3" style="background:rgba(239, 68, 68, 0.08);border:1px solid rgba(239, 68, 68, 0.15);">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span style="font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Temperature</span>
+                <i class="bi bi-thermometer-sun text-danger"></i>
+              </div>
+              <div class="fs-4 fw-bold text-danger">{{ latest_env.temperature or '—' }}°C</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);">Ambient Sensor</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 rounded-3" style="background:rgba(14, 165, 233, 0.08);border:1px solid rgba(14, 165, 233, 0.15);">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span style="font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Humidity</span>
+                <i class="bi bi-droplet-half text-info"></i>
+              </div>
+              <div class="fs-4 fw-bold text-info">{{ latest_env.humidity or '—' }}%</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);">Fungal threshold: 80%</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 rounded-3" style="background:rgba(132, 204, 22, 0.08);border:1px solid rgba(132, 204, 22, 0.15);">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span style="font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Rainfall</span>
+                <i class="bi bi-cloud-rain-heavy" style="color:#65a30d;"></i>
+              </div>
+              <div class="fs-4 fw-bold" style="color:#65a30d;">{{ latest_env.rainfall or '0' }} mm</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);">Precipitation</div>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size:0.85rem;">
+          <i class="bi bi-info-circle"></i>
+          <div>No environmental telemetry logged yet. <a href="{{ url_for('environment.index') }}" class="fw-bold">Log sensor readings →</a></div>
+        </div>
+        {% endif %}
+
+        <div class="chart-container">
+          <canvas id="envChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Crop Health Doughnut -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-pie-chart-fill text-success"></i> Crop Health Ratio
+        </h2>
+      </div>
+      <div class="card-body d-flex flex-column align-items-center justify-content-center text-center">
+        {% if total_crops > 0 %}
+        <div class="chart-container" style="height:230px;width:100%;max-width:260px;">
+          <canvas id="healthChart"></canvas>
+        </div>
+        <div class="d-flex justify-content-center gap-3 mt-3 flex-wrap" style="font-size:0.825rem;">
+          <span class="d-flex align-items-center gap-1">
+            <span style="width:10px;height:10px;background:#10b981;border-radius:3px;display:inline-block;"></span>
+            <strong>{{ healthy_crops }}</strong> Healthy
+          </span>
+          <span class="d-flex align-items-center gap-1">
+            <span style="width:10px;height:10px;background:#ef4444;border-radius:3px;display:inline-block;"></span>
+            <strong>{{ diseased_crops }}</strong> Diseased
+          </span>
+          <span class="d-flex align-items-center gap-1">
+            <span style="width:10px;height:10px;background:#f59e0b;border-radius:3px;display:inline-block;"></span>
+            <strong>{{ total_crops - healthy_crops - diseased_crops }}</strong> At Risk
+          </span>
+        </div>
+        {% else %}
+        <div class="empty-state py-4">
+          <div class="empty-icon"><i class="bi bi-flower1"></i></div>
+          <h3>No crops tracked yet</h3>
+          <p>Register your first crop field to monitor health distributions.</p>
+          <a href="{{ url_for('crops.add_crop') }}" class="btn btn-sm btn-primary mt-3">
+            <i class="bi bi-plus"></i> Add Crop
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Crop Cards & Recent Scans Row ── -->
+<div class="row g-4 mb-4">
+  <!-- Recent Crops with Images -->
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-flower2 text-success"></i> Monitored Crops
+        </h2>
+        <a href="{{ url_for('crops.list_crops') }}" class="btn btn-sm btn-outline">View All ({{ total_crops }})</a>
+      </div>
+      <div class="card-body p-0">
+        {% if recent_crops %}
+        <div class="table-container border-0 rounded-0">
+          <table>
+            <thead>
+              <tr>
+                <th>Crop & Type</th>
+                <th>Stage</th>
+                <th>Health</th>
+                <th>Planted</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for crop in recent_crops %}
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center gap-3">
+                    <div style="width:44px;height:44px;border-radius:10px;overflow:hidden;background:#f1f5f9;border:1px solid #e2e8f0;flex-shrink:0;">
+                      <img src="{{ url_for('static', filename='images/crops/' ~ (crop.crop_type|lower if crop.crop_type else 'other') ~ '.svg') }}"
+                           alt="{{ crop.crop_name }}"
+                           style="width:100%;height:100%;object-fit:cover;"
+                           onerror="this.src='{{ url_for('static', filename='images/crops/other.svg') }}'">
+                    </div>
+                    <div>
+                      <a href="{{ url_for('crops.crop_detail', crop_id=crop.id) }}" class="fw-bold text-main d-block" style="font-size:0.9rem;">
+                        {{ crop.crop_name }}
+                      </a>
+                      <span class="text-muted text-capitalize" style="font-size:0.75rem;">{{ crop.crop_type or 'General' }} · {{ crop.location or 'Field' }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td style="font-size:0.85rem;font-weight:600;color:var(--primary-dark);">
+                  {{ crop.growth_stage or 'Active' }}
+                </td>
+                <td>
+                  <span class="badge {% if crop.health_status=='Healthy' %}badge-success{% elif crop.health_status=='Diseased' %}badge-danger{% else %}badge-warning{% endif %}">
+                    {{ crop.health_status }}
+                  </span>
+                </td>
+                <td style="font-size:0.8rem;color:var(--text-muted);">
+                  {{ crop.planting_date.strftime('%d %b %Y') }}
+                </td>
+                <td class="text-end">
+                  <a href="{{ url_for('crops.crop_detail', crop_id=crop.id) }}" class="btn btn-sm btn-outline" title="Details">
+                    <i class="bi bi-chevron-right"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-4">
+          <div class="empty-icon"><i class="bi bi-flower1"></i></div>
+          <h3>No crops monitored</h3>
+          <p>Get started by adding crops to track growth milestones and yields.</p>
+          <a href="{{ url_for('crops.add_crop') }}" class="btn btn-sm btn-primary mt-2">Add Your First Crop</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent AI Disease Scans -->
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-shield-check text-success"></i> Recent Disease Scans
+        </h2>
+        <a href="{{ url_for('disease.history') }}" class="btn btn-sm btn-outline">History</a>
+      </div>
+      <div class="card-body p-0">
+        {% if recent_detections %}
+        <div class="p-3 d-flex flex-column gap-2" style="max-height:460px;overflow-y:auto;">
+          {% for d in recent_detections %}
+          <div class="d-flex align-items-center gap-3 p-2 rounded-3 border" style="background:#ffffff;">
+            <div style="width:52px;height:52px;border-radius:10px;overflow:hidden;flex-shrink:0;background:#f8fafc;border:1px solid #e2e8f0;">
+              {% if d.image_path %}
+              <img src="{{ url_for('static', filename=d.image_path) }}"
+                   alt="Scan"
+                   style="width:100%;height:100%;object-fit:cover;"
+                   onerror="this.src='{{ url_for('static', filename='images/samples/sample_healthy_leaf.svg') }}'">
+              {% else %}
+              <div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted fs-4">🌿</div>
+              {% endif %}
+            </div>
+            <div class="flex-grow-1 min-width-0">
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-bold text-truncate text-main" style="font-size:0.875rem;">{{ d.disease_name }}</span>
+                <span class="badge {% if d.is_healthy %}badge-success{% else %}badge-danger{% endif %} ms-2" style="font-size:0.68rem;">
+                  {{ 'Healthy' if d.is_healthy else 'Diseased' }}
+                </span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mt-1" style="font-size:0.75rem;color:var(--text-muted);">
+                <span>Confidence: <strong>{{ '%.1f'|format(d.confidence or 0) }}%</strong></span>
+                <span>{{ d.detected_at.strftime('%d %b %H:%M') }}</span>
+              </div>
+            </div>
+            <a href="{{ url_for('disease.result', detection_id=d.id) }}" class="btn btn-sm btn-outline px-2" title="View Diagnosis">
+              <i class="bi bi-arrow-right-short fs-5"></i>
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state py-4">
+          <div class="empty-icon"><i class="bi bi-upc-scan"></i></div>
+          <h3>No diagnostic scans yet</h3>
+          <p>Scan crop leaves using our AI vision model to detect diseases early.</p>
+          <a href="{{ url_for('disease.detect') }}" class="btn btn-sm btn-primary mt-2">Run AI Leaf Scan</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Smart Farm Recommendations Section ── -->
+{% if unread_recs %}
+<div class="row g-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-lightbulb-fill text-warning"></i> Actionable Agronomic Recommendations
+        </h2>
+        <a href="{{ url_for('recommendations.index') }}" class="btn btn-sm btn-outline">Advisory Hub →</a>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          {% for rec in unread_recs %}
+          <div class="col-md-6 col-xl-4">
+            <div class="rec-card priority-{{ rec.priority }} h-100 d-flex flex-column justify-content-between">
+              <div>
+                <div class="rec-header">
+                  <span class="rec-type">
+                    <i class="bi bi-{% if rec.rec_type=='Watering' %}droplet-fill text-info{% elif rec.rec_type=='Fertilizer' %}moisture text-warning{% elif rec.rec_type=='Disease Prevention' %}shield-exclamation text-danger{% else %}heart-fill text-success{% endif %}"></i>
+                    {{ rec.rec_type }}
+                  </span>
+                  <span class="badge {% if rec.priority=='High' %}badge-danger{% elif rec.priority=='Low' %}badge-info{% else %}badge-secondary{% endif %}">
+                    {{ rec.priority }}
+                  </span>
+                </div>
+                <p style="font-size:0.875rem;color:var(--text-secondary);margin:0 0 12px;line-height:1.5;">
+                  {{ rec.recommendation }}
+                </p>
+              </div>
+              <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                <span style="font-size:0.75rem;color:var(--text-muted);">
+                  {{ rec.created_at.strftime('%d %b') if rec.created_at else 'Active' }}
+                </span>
+                <button class="btn btn-sm btn-outline btn-mark-read" data-rec-id="{{ rec.id }}">
+                  <i class="bi bi-check2"></i> Mark Read
+                </button>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let envChartInstance = null;
+let healthChartInstance = null;
+let telemetryData = { labels: [], temperature: [], humidity: [], soil_moisture: [], rainfall: [] };
+let activeMetric = 'soil';
+
+async function initDashboardCharts() {
+  try {
+    const res = await fetch('{{ url_for("dashboard.chart_data") }}');
+    const data = await res.json();
+    telemetryData = data.env;
+
+    // Render Doughnut Chart
+    {% if total_crops > 0 %}
+    const hCtx = document.getElementById('healthChart');
+    if (hCtx) {
+      healthChartInstance = new Chart(hCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Healthy', 'Diseased', 'At Risk'],
+          datasets: [{
+            data: [data.health.healthy, data.health.diseased, data.health.at_risk],
+            backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
+            borderWidth: 0,
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          cutout: '72%',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return ` ${context.label}: ${context.raw} crops`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    {% endif %}
+
+    // Default to Soil Moisture
+    renderEnvChart('soil');
+    document.getElementById('btnSoil')?.classList.add('btn-primary', 'text-white');
+    document.getElementById('btnSoil')?.classList.remove('btn-outline');
+  } catch(err) {
+    console.error('Error fetching dashboard chart data:', err);
+  }
+}
+
+function switchChart(metric, btn) {
+  activeMetric = metric;
+  ['btnSoil', 'btnTemp', 'btnHumid', 'btnRain'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) {
+      b.classList.remove('btn-primary', 'text-white');
+      b.classList.add('btn-outline');
+    }
+  });
+  if (btn) {
+    btn.classList.add('btn-primary', 'text-white');
+    btn.classList.remove('btn-outline');
+  }
+  renderEnvChart(metric);
+}
+
+function renderEnvChart(metric) {
+  const ctx = document.getElementById('envChart');
+  if (!ctx || !telemetryData.labels) return;
+
+  if (envChartInstance) {
+    envChartInstance.destroy();
+  }
+
+  const metricConfigs = {
+    soil: {
+      data: telemetryData.soil_moisture,
+      label: 'Soil Moisture (%)',
+      color: '#16a34a',
+      bg: 'rgba(22, 163, 74, 0.12)'
+    },
+    temp: {
+      data: telemetryData.temperature,
+      label: 'Temperature (°C)',
+      color: '#ef4444',
+      bg: 'rgba(239, 68, 68, 0.12)'
+    },
+    humidity: {
+      data: telemetryData.humidity,
+      label: 'Humidity (%)',
+      color: '#0ea5e9',
+      bg: 'rgba(14, 165, 233, 0.12)'
+    },
+    rainfall: {
+      data: telemetryData.rainfall,
+      label: 'Rainfall (mm)',
+      color: '#84cc16',
+      bg: 'rgba(132, 204, 22, 0.14)'
+    }
+  };
+
+  const cfg = metricConfigs[metric] || metricConfigs['soil'];
+
+  // Gradient fill
+  const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 260);
+  gradient.addColorStop(0, cfg.bg);
+  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+  envChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: telemetryData.labels.length > 0 ? telemetryData.labels : ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Today'],
+      datasets: [{
+        label: cfg.label,
+        data: cfg.data.length > 0 ? cfg.data : [45, 48, 52, 50, 47, 53, 52],
+        borderColor: cfg.color,
+        backgroundColor: gradient,
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: cfg.color,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 7,
+        borderWidth: 2.5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: {
+          grid: { display: false }
+        },
+        y: {
+          grid: { color: 'rgba(226, 232, 240, 0.6)' },
+          beginAtZero: false
+        }
+      }
+    }
+  });
+}
+
+initDashboardCharts();
+</script>
+{% endblock %}

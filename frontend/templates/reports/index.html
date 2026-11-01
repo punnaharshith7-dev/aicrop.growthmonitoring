@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+{% block title %}Farm Reports & Data Export — AI Crop Growth Monitoring{% endblock %}
+{% block page_title %}Farm Reports & Export{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+  <div>
+    <h1>Farm Reports & Analytical Exports</h1>
+    <p class="page-subtitle">Export full telemetry, disease diagnostics, harvest predictions, and crop registries as structured CSV data.</p>
+  </div>
+  <button onclick="window.print()" class="btn btn-outline">
+    <i class="bi bi-printer"></i> Print Executive Report
+  </button>
+</div>
+
+<!-- 4 Core Domain Export Cards -->
+<div class="row g-4 mb-4">
+  <!-- 1. Crops Registry -->
+  <div class="col-md-6 col-xl-3">
+    <div class="card h-100 p-3 d-flex flex-column justify-content-between">
+      <div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="stat-icon green">
+            <i class="bi bi-flower1"></i>
+          </div>
+          <span class="badge badge-success">{{ crops|length }} Entries</span>
+        </div>
+        <h4 class="fs-6 fw-bold mb-1">Crops & Field Registry</h4>
+        <p class="text-muted" style="font-size:0.8rem;">Varieties, planting dates, stage progress, and acreages.</p>
+      </div>
+      <a href="{{ url_for('reports.download_csv', report_type='crops') }}" class="btn btn-primary btn-sm w-100 mt-2">
+        <i class="bi bi-download"></i> Download Crops CSV
+      </a>
+    </div>
+  </div>
+
+  <!-- 2. Disease Log -->
+  <div class="col-md-6 col-xl-3">
+    <div class="card h-100 p-3 d-flex flex-column justify-content-between">
+      <div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="stat-icon danger">
+            <i class="bi bi-shield-check"></i>
+          </div>
+          <span class="badge badge-danger">{{ detections|length }} Scans</span>
+        </div>
+        <h4 class="fs-6 fw-bold mb-1">Pathology Diagnostic Log</h4>
+        <p class="text-muted" style="font-size:0.8rem;">Computer vision confidence scores and symptoms history.</p>
+      </div>
+      <a href="{{ url_for('reports.download_csv', report_type='disease') }}" class="btn btn-primary btn-sm w-100 mt-2">
+        <i class="bi bi-download"></i> Download Scans CSV
+      </a>
+    </div>
+  </div>
+
+  <!-- 3. Yield Projections -->
+  <div class="col-md-6 col-xl-3">
+    <div class="card h-100 p-3 d-flex flex-column justify-content-between">
+      <div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="stat-icon info">
+            <i class="bi bi-graph-up-arrow"></i>
+          </div>
+          <span class="badge badge-info">{{ predictions|length }} Forecasts</span>
+        </div>
+        <h4 class="fs-6 fw-bold mb-1">Yield Projections</h4>
+        <p class="text-muted" style="font-size:0.8rem;">Estimated harvest productivity, soil conditions, and rainfall.</p>
+      </div>
+      <a href="{{ url_for('reports.download_csv', report_type='yield') }}" class="btn btn-primary btn-sm w-100 mt-2">
+        <i class="bi bi-download"></i> Download Yield CSV
+      </a>
+    </div>
+  </div>
+
+  <!-- 4. Environmental IoT Readings -->
+  <div class="col-md-6 col-xl-3">
+    <div class="card h-100 p-3 d-flex flex-column justify-content-between">
+      <div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="stat-icon accent">
+            <i class="bi bi-thermometer-sun"></i>
+          </div>
+          <span class="badge badge-success">{{ env_readings|length }} Readings</span>
+        </div>
+        <h4 class="fs-6 fw-bold mb-1">Environmental IoT</h4>
+        <p class="text-muted" style="font-size:0.8rem;">Moisture probes, ambient thermal data, and precipitation.</p>
+      </div>
+      <a href="{{ url_for('reports.download_csv', report_type='environment') }}" class="btn btn-primary btn-sm w-100 mt-2">
+        <i class="bi bi-download"></i> Download IoT CSV
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Tabbed Interactive Preview Section -->
+<div class="card">
+  <div class="card-header p-0 bg-transparent border-bottom">
+    <ul class="nav nav-tabs border-0 px-3 pt-2" id="reportTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active fw-bold text-success" id="crops-tab" data-bs-toggle="tab" data-bs-target="#crops-pane" type="button" role="tab">
+          <i class="bi bi-flower1 me-1"></i> Crops Preview ({{ crops|length }})
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold text-secondary" id="disease-tab" data-bs-toggle="tab" data-bs-target="#disease-pane" type="button" role="tab">
+          <i class="bi bi-shield-check me-1"></i> Pathology Preview ({{ detections|length }})
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold text-secondary" id="yield-tab" data-bs-toggle="tab" data-bs-target="#yield-pane" type="button" role="tab">
+          <i class="bi bi-graph-up me-1"></i> Yield Forecasts ({{ predictions|length }})
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold text-secondary" id="env-tab" data-bs-toggle="tab" data-bs-target="#env-pane" type="button" role="tab">
+          <i class="bi bi-broadcast me-1"></i> Telemetry Logs ({{ env_readings|length }})
+        </button>
+      </li>
+    </ul>
+  </div>
+
+  <div class="tab-content" id="reportTabsContent">
+    <!-- Crops Preview -->
+    <div class="tab-pane fade show active" id="crops-pane" role="tabpanel">
+      {% if crops %}
+      <div class="table-container border-0">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Crop Name</th>
+              <th>Type</th>
+              <th>Planting Date</th>
+              <th>Area</th>
+              <th>Growth Stage</th>
+              <th>Health</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in crops %}
+            <tr>
+              <td>#{{ c.id }}</td>
+              <td class="fw-bold">{{ c.crop_name }}</td>
+              <td class="text-capitalize">{{ c.crop_type }}</td>
+              <td>{{ c.planting_date.strftime('%d %b %Y') }}</td>
+              <td>{{ c.field_area or '—' }} ha</td>
+              <td><span class="badge badge-secondary">{{ c.growth_stage }}</span></td>
+              <td>
+                <span class="badge {% if c.health_status=='Healthy' %}badge-success{% elif c.health_status=='Diseased' %}badge-danger{% else %}badge-warning{% endif %}">
+                  {{ c.health_status }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state py-4"><p>No crops to preview.</p></div>
+      {% endif %}
+    </div>
+
+    <!-- Pathology Preview -->
+    <div class="tab-pane fade" id="disease-pane" role="tabpanel">
+      {% if detections %}
+      <div class="table-container border-0">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Disease Diagnosis</th>
+              <th>Confidence</th>
+              <th>Condition</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in detections %}
+            <tr>
+              <td>#{{ d.id }}</td>
+              <td class="fw-bold">{{ d.disease_name }}</td>
+              <td>{{ '%.1f'|format(d.confidence or 0) }}%</td>
+              <td>
+                <span class="badge {% if d.is_healthy %}badge-success{% else %}badge-danger{% endif %}">
+                  {{ 'Healthy' if d.is_healthy else 'Diseased' }}
+                </span>
+              </td>
+              <td>{{ d.detected_at.strftime('%d %b %Y %H:%M') }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state py-4"><p>No disease scans to preview.</p></div>
+      {% endif %}
+    </div>
+
+    <!-- Yield Forecasts Preview -->
+    <div class="tab-pane fade" id="yield-pane" role="tabpanel">
+      {% if predictions %}
+      <div class="table-container border-0">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Crop Variety</th>
+              <th>Area</th>
+              <th>Rainfall</th>
+              <th>Soil</th>
+              <th>Fertilizer</th>
+              <th>Yield / Ha</th>
+              <th>Total Harvest</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in predictions %}
+            <tr>
+              <td>#{{ p.id }}</td>
+              <td class="fw-bold text-capitalize">{{ p.crop_type }}</td>
+              <td>{{ p.area }} ha</td>
+              <td>{{ p.rainfall or '—' }} mm</td>
+              <td class="text-capitalize">{{ p.soil_type }}</td>
+              <td class="text-uppercase">{{ p.fertilizer }}</td>
+              <td><span class="badge badge-success">{{ p.predicted_yield }} t/ha</span></td>
+              <td><strong>{{ '%.2f'|format(p.predicted_yield * (p.area or 1.0)) }} Tonnes</strong></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state py-4"><p>No yield predictions to preview.</p></div>
+      {% endif %}
+    </div>
+
+    <!-- Telemetry Logs Preview -->
+    <div class="tab-pane fade" id="env-pane" role="tabpanel">
+      {% if env_readings %}
+      <div class="table-container border-0">
+        <table>
+          <thead>
+            <tr>
+              <th>Date & Time</th>
+              <th>Soil Moisture</th>
+              <th>Temperature</th>
+              <th>Humidity</th>
+              <th>Precipitation</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in env_readings %}
+            <tr>
+              <td class="fw-semibold">{{ r.reading_date.strftime('%d %b %Y, %H:%M') }}</td>
+              <td><strong>{{ r.soil_moisture or '—' }}%</strong></td>
+              <td>{{ r.temperature or '—' }}°C</td>
+              <td>{{ r.humidity or '—' }}%</td>
+              <td>{{ r.rainfall or '0' }} mm</td>
+              <td class="text-muted" style="font-size:0.8rem;">{{ r.notes or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state py-4"><p>No telemetry readings to preview.</p></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+

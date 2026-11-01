@@ -1,0 +1,478 @@
+{% extends 'base.html' %}
+{% block title %}{{ crop.crop_name }} ({{ crop.crop_variety or crop.crop_type|title }}) — AI Crop Growth Monitoring{% endblock %}
+{% block page_title %}Crop Growth Telemetry{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+  <div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <h1 class="mb-0">{{ crop.crop_name }}</h1>
+      {% if crop.crop_variety %}
+      <span class="badge badge-secondary py-1 px-2 fs-6">
+        <i class="bi bi-seedling me-1 text-success"></i> {{ crop.crop_variety }}
+      </span>
+      {% endif %}
+      <span class="badge {% if crop.health_status=='Healthy' %}badge-success{% elif crop.health_status=='Diseased' %}badge-danger{% else %}badge-warning{% endif %} py-1 px-2">
+        {{ crop.health_status }}
+      </span>
+    </div>
+    <p class="page-subtitle text-capitalize mb-0 mt-1">
+      {{ crop.crop_type or 'Field Crop' }} · {{ crop.location or 'Main Farmland' }}
+      {% if crop.field_area %} · <strong>{{ crop.field_area }} Hectares</strong>{% endif %}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('crops.list_crops') }}" class="btn btn-outline">
+      <i class="bi bi-arrow-left"></i> All Crops
+    </a>
+    <a href="{{ url_for('crops.edit_crop', crop_id=crop.id) }}" class="btn btn-outline">
+      <i class="bi bi-pencil"></i> Edit Parameters
+    </a>
+    <a href="{{ url_for('disease.detect') }}" class="btn btn-primary">
+      <i class="bi bi-camera"></i> AI Leaf Scan
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Left Column: Growth Progress, Stepper, and Charts -->
+  <div class="col-lg-8">
+    <!-- Visual Crop Banner & Master Progress Card -->
+    <div class="card mb-4 overflow-hidden">
+      <div class="row g-0 align-items-center">
+        <div class="col-md-5 p-0" style="height:230px;background:#f8fafc;position:relative;">
+          <img src="{{ url_for('static', filename='images/crops/' ~ (crop.crop_type|lower if crop.crop_type else 'other') ~ '.svg') }}"
+               alt="{{ crop.crop_name }}"
+               style="width:100%;height:100%;object-fit:cover;"
+               onerror="this.src='{{ url_for('static', filename='images/crops/other.svg') }}'">
+          <div class="position-absolute bottom-0 start-0 m-3 px-3 py-1 rounded-pill bg-dark bg-opacity-75 text-white" style="font-size:0.75rem;font-weight:600;">
+            <i class="bi bi-tag text-success me-1"></i> {{ crop.crop_type|title }}
+            {% if crop.crop_variety %} · {{ crop.crop_variety }}{% endif %}
+          </div>
+        </div>
+        <div class="col-md-7 p-4">
+          <div class="d-flex align-items-center gap-4">
+            <!-- Radial Circular Progress Gauge -->
+            <div style="width:110px;height:110px;border-radius:50%;background:conic-gradient(#16a34a {{ growth.progress * 3.6 }}deg, #e2e8f0 0deg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <div style="width:84px;height:84px;border-radius:50%;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                <span class="fs-4 fw-bold text-success">{{ growth.progress }}%</span>
+                <span style="font-size:0.65rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Cycle</span>
+              </div>
+            </div>
+            <div class="flex-grow-1">
+              <span class="badge badge-info mb-1" style="font-size:0.7rem;">Active Growth Stage</span>
+              <h3 class="fs-4 fw-bold mb-1 text-main">{{ growth.current_stage }}</h3>
+              <p class="text-muted mb-2" style="font-size:0.85rem;">
+                <strong>{{ growth.elapsed_days }}</strong> of {{ growth.total_days }} total days elapsed
+              </p>
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge badge-success py-1 px-2">
+                  <i class="bi bi-clock-history me-1"></i>
+                  {% if growth.is_harvest_ready %}
+                  Physiological Maturity Reached
+                  {% else %}
+                  {{ growth.days_remaining }} days to harvest
+                  {% endif %}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overall Linear Progress Bar -->
+          <div class="mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-1" style="font-size:0.75rem;color:var(--text-muted);">
+              <span>Planting: {{ growth.planting_date.strftime('%d %b %Y') }}</span>
+              <span>Target Harvest: {{ growth.harvest_date.strftime('%d %b %Y') }}</span>
+            </div>
+            <div class="progress" style="height:10px;border-radius:6px;background:#e2e8f0;">
+              <div class="progress-bar bg-success progress-bar-striped progress-bar-animated"
+                   role="progressbar"
+                   style="width: {{ growth.progress }}%;"
+                   aria-valuenow="{{ growth.progress }}"
+                   aria-valuemin="0"
+                   aria-valuemax="100"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6-Stage Biological Stepper Progress Bar -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-bezier2 text-success"></i> Biological Growth Stages (6 Phases)
+        </h2>
+        <span style="font-size:0.8rem;color:var(--text-muted);">
+          Current Phase: <strong class="text-success">{{ growth.current_stage }}</strong>
+        </span>
+      </div>
+      <div class="card-body">
+        <!-- Milestone Stepper -->
+        <div class="py-3 px-2 overflow-x-auto">
+          <div class="d-flex justify-content-between position-relative" style="min-width:580px;">
+            <!-- Connector Line -->
+            <div style="position:absolute;top:20px;left:30px;right:30px;height:4px;background:#e2e8f0;z-index:0;"></div>
+            <div style="position:absolute;top:20px;left:30px;width:{{ (growth.current_stage_index / (growth.stages|length - 1)) * 100 if growth.stages|length > 1 else 0 }}%;height:4px;background:linear-gradient(90deg, #16a34a, #84cc16);z-index:1;transition:width 0.6s ease;"></div>
+
+            {% for stage in growth.stages %}
+            <div class="text-center position-relative" style="z-index:2;flex:1;">
+              <div style="width:42px;height:42px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;
+                background:{% if stage.status == 'completed' %}#16a34a{% elif stage.status == 'current' %}#ffffff{% else %}#ffffff{% endif %};
+                color:{% if stage.status == 'completed' %}#ffffff{% elif stage.status == 'current' %}#16a34a{% else %}#94a3b8{% endif %};
+                border:3px solid {% if stage.status in ['completed', 'current'] %}#16a34a{% else %}#e2e8f0{% endif %};
+                box-shadow:{% if stage.status == 'current' %}0 0 0 5px rgba(22, 163, 74, 0.25){% else %}none{% endif %};">
+                {% if stage.status == 'completed' %}
+                  <i class="bi bi-check-lg"></i>
+                {% else %}
+                  {{ stage.index + 1 }}
+                {% endif %}
+              </div>
+              <div style="font-size:0.775rem;font-weight:{% if stage.status == 'current' %}700{% else %}500{% endif %};color:{% if stage.status == 'current' %}#15803d{% else %}var(--text-muted){% endif %};">
+                {{ stage.name }}
+              </div>
+              <div style="font-size:0.68rem;color:var(--text-muted);">
+                {{ stage.duration_days }}d
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Active Stage Sub-Progress Bar & Agronomic Advisory -->
+        {% set active_stage_obj = growth.stages[growth.current_stage_index] %}
+        <div class="mt-4 p-4 rounded-3 border" style="background:#f8fafc;">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge {{ active_stage_obj.badge_class }} py-1 px-2">Stage {{ active_stage_obj.index + 1 }} of 6</span>
+              <h4 class="fs-5 fw-bold mb-0 text-main">{{ active_stage_obj.name }} Phase</h4>
+            </div>
+            <span class="text-success fw-bold" style="font-size:0.875rem;">
+              {{ active_stage_obj.sub_progress_percent }}% of this stage completed
+            </span>
+          </div>
+
+          <p class="text-secondary mb-3" style="font-size:0.875rem;line-height:1.5;">
+            {{ active_stage_obj.summary }}
+          </p>
+
+          <!-- Stage Sub-Progress Bar -->
+          <div class="progress mb-3" style="height:8px;border-radius:4px;background:#e2e8f0;">
+            <div class="progress-bar bg-primary"
+                 role="progressbar"
+                 style="width: {{ active_stage_obj.sub_progress_percent }}%;"
+                 aria-valuenow="{{ active_stage_obj.sub_progress_percent }}"
+                 aria-valuemin="0"
+                 aria-valuemax="100"></div>
+          </div>
+
+          <!-- Agronomic Stage Action Items -->
+          <div class="row g-3 pt-2">
+            <div class="col-md-4">
+              <div class="p-3 rounded-2 border bg-white h-100">
+                <div class="fw-bold text-info mb-1" style="font-size:0.8rem;">
+                  <i class="bi bi-droplet-fill me-1"></i> Irrigation Protocol
+                </div>
+                <div style="font-size:0.775rem;color:var(--text-secondary);">
+                  {{ active_stage_obj.water_need }}
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3 rounded-2 border bg-white h-100">
+                <div class="fw-bold text-success mb-1" style="font-size:0.8rem;">
+                  <i class="bi bi-moisture me-1"></i> Nutrient Focus
+                </div>
+                <div style="font-size:0.775rem;color:var(--text-secondary);">
+                  {{ active_stage_obj.nutrient_focus }}
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3 rounded-2 border bg-white h-100">
+                <div class="fw-bold text-danger mb-1" style="font-size:0.8rem;">
+                  <i class="bi bi-shield-exclamation me-1"></i> Risk Factors & Scouting
+                </div>
+                <div style="font-size:0.775rem;color:var(--text-secondary);">
+                  {{ active_stage_obj.risk_factors }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Charts: S-Curve & Stage Timeline -->
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="card-title">
+          <i class="bi bi-graph-up text-success"></i> Growth Progress & Biomass Trajectory
+        </h2>
+        <div class="btn-group btn-group-sm" role="group">
+          <button type="button" class="btn btn-primary text-white" id="btnChartCurve" onclick="switchChartTab('curve')">S-Curve Growth</button>
+          <button type="button" class="btn btn-outline" id="btnChartGantt" onclick="switchChartTab('gantt')">Stage Breakdown</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="chart-container" style="height:280px;position:relative;">
+          <canvas id="growthChartCanvas"></canvas>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top text-muted" style="font-size:0.775rem;">
+          <span><i class="bi bi-circle-fill text-success me-1"></i> Green Marker indicates Current Field Day (Day {{ growth.elapsed_days }})</span>
+          <span>Target Harvest: <strong>{{ growth.harvest_date.strftime('%d %b %Y') }}</strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Crop Specs & Quick Operations -->
+  <div class="col-lg-4">
+    <!-- Field Parameters Card -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-info-circle text-success"></i> Field Specifications
+        </h2>
+      </div>
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush border-0">
+          <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+            <span class="text-muted"><i class="bi bi-flower1 me-2 text-success"></i> Crop Type</span>
+            <strong class="text-capitalize">{{ crop.crop_type or 'General Crop' }}</strong>
+          </div>
+          {% if crop.crop_variety %}
+          <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+            <span class="text-muted"><i class="bi bi-seedling me-2 text-success"></i> Crop Variety</span>
+            <strong class="text-success">{{ crop.crop_variety }}</strong>
+          </div>
+          {% endif %}
+          <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+            <span class="text-muted"><i class="bi bi-calendar-event me-2 text-success"></i> Sowing Date</span>
+            <strong>{{ crop.planting_date.strftime('%d %b %Y') }}</strong>
+          </div>
+          <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+            <span class="text-muted"><i class="bi bi-calendar-check me-2 text-success"></i> Target Harvest</span>
+            <strong class="text-success">{{ growth.harvest_date.strftime('%d %b %Y') }}</strong>
+          </div>
+          <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+            <span class="text-muted"><i class="bi bi-hourglass-split me-2 text-success"></i> Total Duration</span>
+            <strong>{{ growth.total_days }} Days Cycle</strong>
+          </div>
+          {% if crop.field_area %}
+          <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+            <span class="text-muted"><i class="bi bi-bounding-box-circles me-2 text-success"></i> Land Area</span>
+            <strong>{{ crop.field_area }} Hectares</strong>
+          </div>
+          {% endif %}
+          {% if crop.location %}
+          <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+            <span class="text-muted"><i class="bi bi-geo-alt me-2 text-success"></i> Sector Location</span>
+            <strong>{{ crop.location }}</strong>
+          </div>
+          {% endif %}
+          <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+            <span class="text-muted"><i class="bi bi-heart-pulse me-2 text-success"></i> Health Status</span>
+            <span class="badge {% if crop.health_status=='Healthy' %}badge-success{% elif crop.health_status=='Diseased' %}badge-danger{% else %}badge-warning{% endif %}">
+              {{ crop.health_status }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agronomist Notes Card -->
+    {% if crop.notes %}
+    <div class="card mb-4">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-card-text text-success"></i> Agronomist Notes
+        </h2>
+      </div>
+      <div class="card-body" style="font-size:0.875rem;color:var(--text-secondary);line-height:1.6;">
+        {{ crop.notes }}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Operations Toolbar -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-lightning-charge text-warning"></i> Crop Operations
+        </h2>
+      </div>
+      <div class="card-body d-flex flex-column gap-2">
+        <a href="{{ url_for('disease.detect') }}" class="btn btn-outline w-100 justify-content-start">
+          <i class="bi bi-camera text-primary me-2"></i> Run AI Disease Leaf Scan
+        </a>
+        <a href="{{ url_for('environment.index') }}" class="btn btn-outline w-100 justify-content-start">
+          <i class="bi bi-thermometer-sun text-info me-2"></i> Log IoT Sensor Reading
+        </a>
+        <a href="{{ url_for('yield_pred.predict') }}" class="btn btn-outline w-100 justify-content-start">
+          <i class="bi bi-graph-up-arrow text-success me-2"></i> Run Yield Prediction Model
+        </a>
+        <a href="{{ url_for('crops.edit_crop', crop_id=crop.id) }}" class="btn btn-outline w-100 justify-content-start">
+          <i class="bi bi-pencil text-secondary me-2"></i> Edit Field & Variety Details
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentChart = null;
+let telemetryData = null;
+let currentTab = 'curve';
+
+async function initGrowthCharts() {
+  try {
+    const res = await fetch('{{ url_for("crops.growth_data", crop_id=crop.id) }}');
+    telemetryData = await res.json();
+    renderChart();
+  } catch (err) {
+    console.error('Error fetching crop growth telemetry:', err);
+  }
+}
+
+function switchChartTab(tab) {
+  currentTab = tab;
+  document.getElementById('btnChartCurve')?.classList.toggle('btn-primary', tab === 'curve');
+  document.getElementById('btnChartCurve')?.classList.toggle('text-white', tab === 'curve');
+  document.getElementById('btnChartCurve')?.classList.toggle('btn-outline', tab !== 'curve');
+
+  document.getElementById('btnChartGantt')?.classList.toggle('btn-primary', tab === 'gantt');
+  document.getElementById('btnChartGantt')?.classList.toggle('text-white', tab === 'gantt');
+  document.getElementById('btnChartGantt')?.classList.toggle('btn-outline', tab !== 'gantt');
+
+  renderChart();
+}
+
+function renderChart() {
+  if (!telemetryData) return;
+  const ctx = document.getElementById('growthChartCanvas');
+  if (!ctx) return;
+
+  if (currentChart) {
+    currentChart.destroy();
+  }
+
+  if (currentTab === 'curve') {
+    renderCurveChart(ctx);
+  } else {
+    renderGanttChart(ctx);
+  }
+}
+
+function renderCurveChart(ctx) {
+  const chartData = telemetryData.chart;
+  const currentProgress = telemetryData.progress;
+  const elapsedDays = telemetryData.elapsed_days;
+  const totalDays = telemetryData.total_days;
+
+  // Gradient fill
+  const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 260);
+  gradient.addColorStop(0, 'rgba(22, 163, 74, 0.25)');
+  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+  currentChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartData.labels,
+      datasets: [{
+        label: 'Biological S-Curve Trajectory (%)',
+        data: chartData.expected_curve,
+        borderColor: '#16a34a',
+        backgroundColor: gradient,
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#16a34a',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        borderWidth: 2.5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              return ` Projected Completion: ${ctx.raw}%`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          title: { display: true, text: 'Growth Timeline (Days Since Sowing)', color: '#64748b', font: { size: 11 } }
+        },
+        y: {
+          min: 0,
+          max: 100,
+          ticks: { callback: v => v + '%' },
+          grid: { color: 'rgba(226, 232, 240, 0.6)' },
+          title: { display: true, text: 'Maturity Progress (%)', color: '#64748b', font: { size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+function renderGanttChart(ctx) {
+  const stages = telemetryData.stages;
+  const labels = stages.map(s => s.name);
+  const durations = stages.map(s => s.duration_days);
+  const backgroundColors = stages.map(s => {
+    if (s.status === 'completed') return '#16a34a';
+    if (s.status === 'current') return '#f59e0b';
+    return '#cbd5e1';
+  });
+
+  currentChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Duration (Days)',
+        data: durations,
+        backgroundColor: backgroundColors,
+        borderRadius: 8,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const st = stages[ctx.dataIndex];
+              return ` Duration: ${ctx.raw} days (Day ${st.start_day} to ${st.end_day})`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: {
+          grid: { color: 'rgba(226, 232, 240, 0.6)' },
+          title: { display: true, text: 'Stage Duration in Days', color: '#64748b', font: { size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+initGrowthCharts();
+</script>
+{% endblock %}

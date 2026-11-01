@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% block title %}Smart Recommendations & Advisory — AI Crop Growth Monitoring{% endblock %}
+{% block page_title %}Smart Advisory Hub{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+  <div>
+    <div class="d-flex align-items-center gap-2">
+      <h1>Smart Farm Advisory & Recommendations</h1>
+      {% set unread_count = all_recs|selectattr('is_read', 'equalto', false)|list|length %}
+      {% if unread_count > 0 %}
+      <span class="badge badge-danger">{{ unread_count }} Actionable Alerts</span>
+      {% else %}
+      <span class="badge badge-success">All Clear</span>
+      {% endif %}
+    </div>
+    <p class="page-subtitle">Real-time agronomic guidance derived from soil moisture sensors, weather telemetry, and disease diagnoses.</p>
+  </div>
+  <div class="d-flex gap-2">
+    {% if unread_count > 0 %}
+    <form method="POST" action="{{ url_for('recommendations.mark_all_read') }}">
+      <button type="submit" class="btn btn-outline">
+        <i class="bi bi-check2-all"></i> Mark All as Read
+      </button>
+    </form>
+    {% endif %}
+    <a href="{{ url_for('environment.index') }}" class="btn btn-primary">
+      <i class="bi bi-broadcast"></i> Check Telemetry
+    </a>
+  </div>
+</div>
+
+<!-- Advisory Summary KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon info"><i class="bi bi-droplet-half"></i></div>
+      <div>
+        <div class="stat-value">{{ grouped.get('Watering', [])|length }}</div>
+        <div class="stat-label">Watering Guides</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon warning"><i class="bi bi-moisture"></i></div>
+      <div>
+        <div class="stat-value">{{ grouped.get('Fertilizer', [])|length }}</div>
+        <div class="stat-label">Fertilizer Tips</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon danger"><i class="bi bi-shield-exclamation"></i></div>
+      <div>
+        <div class="stat-value">{{ grouped.get('Disease Prevention', [])|length }}</div>
+        <div class="stat-label">Disease Alerts</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon green"><i class="bi bi-heart-pulse-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ grouped.get('Crop Care', [])|length }}</div>
+        <div class="stat-label">General Care</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filter Tabs -->
+<div class="card p-3 mb-4">
+  <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+    <div class="d-flex flex-wrap gap-1" id="recCategoryTabs">
+      <button class="btn btn-sm btn-primary active text-white" onclick="filterCategory('all', this)">
+        All ({{ all_recs|length }})
+      </button>
+      <button class="btn btn-sm btn-outline" onclick="filterCategory('Watering', this)">
+        <i class="bi bi-droplet-fill text-info me-1"></i> Watering ({{ grouped.get('Watering', [])|length }})
+      </button>
+      <button class="btn btn-sm btn-outline" onclick="filterCategory('Fertilizer', this)">
+        <i class="bi bi-moisture text-warning me-1"></i> Fertilizer ({{ grouped.get('Fertilizer', [])|length }})
+      </button>
+      <button class="btn btn-sm btn-outline" onclick="filterCategory('Disease Prevention', this)">
+        <i class="bi bi-shield-exclamation text-danger me-1"></i> Disease Prevention ({{ grouped.get('Disease Prevention', [])|length }})
+      </button>
+      <button class="btn btn-sm btn-outline" onclick="filterCategory('Crop Care', this)">
+        <i class="bi bi-heart-pulse-fill text-success me-1"></i> Crop Care ({{ grouped.get('Crop Care', [])|length }})
+      </button>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <select id="priorityFilterSelect" class="form-select form-select-sm" style="width:auto;" onchange="filterCategory()">
+        <option value="">All Priorities</option>
+        <option value="High">High Priority</option>
+        <option value="Normal">Normal Priority</option>
+        <option value="Low">Low Priority</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- Recommendations List -->
+{% if all_recs %}
+<div class="row g-3" id="recommendationsList">
+  {% for rec in all_recs %}
+  <div class="col-md-6 rec-item"
+       data-category="{{ rec.rec_type }}"
+       data-priority="{{ rec.priority }}"
+       data-read="{{ 'read' if rec.is_read else 'unread' }}">
+    <div class="rec-card priority-{{ rec.priority }} h-100 d-flex flex-column justify-content-between {% if rec.is_read %}opacity-75{% endif %}">
+      <div>
+        <div class="rec-header">
+          <span class="rec-type">
+            <i class="bi bi-{% if rec.rec_type=='Watering' %}droplet-fill text-info{% elif rec.rec_type=='Fertilizer' %}moisture text-warning{% elif rec.rec_type=='Disease Prevention' %}shield-exclamation text-danger{% else %}heart-fill text-success{% endif %}"></i>
+            {{ rec.rec_type }}
+            {% if not rec.is_read %}
+            <span class="badge badge-danger ms-2" style="font-size:0.65rem;">NEW</span>
+            {% endif %}
+          </span>
+          <span class="badge {% if rec.priority=='High' %}badge-danger{% elif rec.priority=='Low' %}badge-info{% else %}badge-secondary{% endif %}">
+            {{ rec.priority }} Priority
+          </span>
+        </div>
+
+        <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.6;margin-bottom:14px;">
+          {{ rec.recommendation }}
+        </p>
+
+        {% if rec.crop %}
+        <div class="p-2 rounded-2 mb-2 border text-truncate" style="background:#f8fafc;font-size:0.775rem;">
+          <i class="bi bi-flower1 text-success me-1"></i> Target Crop: <strong>{{ rec.crop.crop_name }}</strong> ({{ rec.crop.crop_type|title }})
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center pt-2 border-top mt-auto" style="font-size:0.775rem;">
+        <span class="text-muted">
+          {{ rec.created_at.strftime('%d %b %Y, %H:%M') if rec.created_at else 'Recent' }}
+        </span>
+        <div class="d-flex gap-2">
+          {% if not rec.is_read %}
+          <button class="btn btn-sm btn-outline btn-mark-read" data-rec-id="{{ rec.id }}">
+            <i class="bi bi-check2"></i> Mark Read
+          </button>
+          {% else %}
+          <span class="text-muted"><i class="bi bi-check-all text-success"></i> Read</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div id="noRecResults" class="empty-state d-none">
+  <div class="empty-icon"><i class="bi bi-funnel"></i></div>
+  <h3>No recommendations in this category</h3>
+  <p>Try switching categories or clearing the priority filter.</p>
+</div>
+
+{% else %}
+<div class="card p-5 text-center">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="bi bi-lightbulb"></i></div>
+    <h3>No active recommendations</h3>
+    <p>As you log environmental readings and crops, our advisory system will generate precision care plans.</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentCategory = 'all';
+
+function filterCategory(category, btn) {
+  if (category !== undefined) {
+    currentCategory = category;
+    if (btn) {
+      document.querySelectorAll('#recCategoryTabs button').forEach(b => {
+        b.classList.remove('btn-primary', 'text-white');
+        b.classList.add('btn-outline');
+      });
+      btn.classList.add('btn-primary', 'text-white');
+      btn.classList.remove('btn-outline');
+    }
+  }
+
+  const priority = document.getElementById('priorityFilterSelect').value;
+  const items = document.querySelectorAll('.rec-item');
+  let visibleCount = 0;
+
+  items.forEach(item => {
+    const itemCat = item.getAttribute('data-category');
+    const itemPri = item.getAttribute('data-priority');
+
+    const matchesCat = currentCategory === 'all' || itemCat === currentCategory;
+    const matchesPri = !priority || itemPri === priority;
+
+    if (matchesCat && matchesPri) {
+      item.style.display = '';
+      visibleCount++;
+    } else {
+      item.style.display = 'none';
+    }
+  });
+
+  const noMsg = document.getElementById('noRecResults');
+  if (noMsg) {
+    if (visibleCount === 0) noMsg.classList.remove('d-none');
+    else noMsg.classList.add('d-none');
+  }
+}
+</script>
+{% endblock %}
+

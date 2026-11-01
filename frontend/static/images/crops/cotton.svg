@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%">
+  <defs>
+    <linearGradient id="cotBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f0fdf4"/>
+      <stop offset="100%" stop-color="#dcfce7"/>
+    </linearGradient>
+    <radialGradient id="bollGrad" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="70%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#cotBg)"/>
+  <g transform="translate(200, 160)">
+    <path d="M -140 100 Q -60 40 40 -10 T 150 -80" stroke="#78350f" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M -20 25 L -70 -20" stroke="#78350f" stroke-width="4" stroke-linecap="round"/>
+    <g transform="translate(-70, -25)">
+      <path d="M 0 10 L -25 35 L -8 18 L 0 40 L 8 18 L 25 35 Z" fill="#92400e"/>
+      <circle cx="-15" cy="-5" r="20" fill="url(#bollGrad)"/>
+      <circle cx="15" cy="-5" r="20" fill="url(#bollGrad)"/>
+      <circle cx="0" cy="-22" r="22" fill="url(#bollGrad)"/>
+      <circle cx="0" cy="-2" r="24" fill="url(#bollGrad)"/>
+    </g>
+    <g transform="translate(50, -20)">
+      <path d="M 0 15 L -35 48 L -12 25 L 0 55 L 12 25 L 35 48 Z" fill="#78350f"/>
+      <circle cx="-22" cy="-5" r="28" fill="url(#bollGrad)"/>
+      <circle cx="22" cy="-5" r="28" fill="url(#bollGrad)"/>
+      <circle cx="0" cy="-30" r="30" fill="url(#bollGrad)"/>
+      <circle cx="0" cy="0" r="32" fill="url(#bollGrad)"/>
+    </g>
+  </g>
+</svg>

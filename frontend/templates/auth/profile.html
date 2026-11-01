@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}Farmer Profile & Settings — AI Crop Growth Monitoring{% endblock %}
+{% block page_title %}Farmer Profile{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+  <div>
+    <h1>Farmer Profile & Farm Credentials</h1>
+    <p class="page-subtitle">Manage personal contact info, farm location parameters, and account security.</p>
+  </div>
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline">
+    <i class="bi bi-arrow-left"></i> Dashboard
+  </a>
+</div>
+
+<div class="row g-4">
+  <!-- Profile Summary Card -->
+  <div class="col-lg-4">
+    <div class="card text-center p-4">
+      <div class="position-relative d-inline-block mx-auto mb-3">
+        {% if current_user.profile_image %}
+        <img src="{{ url_for('static', filename=current_user.profile_image) }}"
+             alt="Profile" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--primary);box-shadow:var(--shadow-green);"
+             onerror="this.src='';this.parentElement.innerHTML='<div class=\'user-avatar mx-auto\' style=\'width:100px;height:100px;font-size:2.4rem;\'>{{ (current_user.full_name or current_user.username)[0].upper() }}</div>';">
+        {% else %}
+        <div style="width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg, #22c55e, #15803d);color:#fff;display:flex;align-items:center;justify-content:center;font-size:2.5rem;font-weight:700;box-shadow:var(--shadow-green);">
+          {{ (current_user.full_name or current_user.username)[0].upper() }}
+        </div>
+        {% endif %}
+      </div>
+
+      <h3 class="fs-4 fw-bold mb-1">{{ current_user.full_name or current_user.username }}</h3>
+      <span class="badge badge-success mb-3">Verified Farm Operator</span>
+
+      <div class="list-group list-group-flush text-start border rounded-3 overflow-hidden mb-3" style="font-size:0.85rem;">
+        <div class="list-group-item d-flex align-items-center gap-2 py-3">
+          <i class="bi bi-envelope text-success fs-5"></i>
+          <div>
+            <div class="text-muted" style="font-size:0.75rem;">EMAIL</div>
+            <strong>{{ current_user.email }}</strong>
+          </div>
+        </div>
+        {% if current_user.phone %}
+        <div class="list-group-item d-flex align-items-center gap-2 py-3">
+          <i class="bi bi-telephone text-success fs-5"></i>
+          <div>
+            <div class="text-muted" style="font-size:0.75rem;">PHONE</div>
+            <strong>{{ current_user.phone }}</strong>
+          </div>
+        </div>
+        {% endif %}
+        {% if current_user.location %}
+        <div class="list-group-item d-flex align-items-center gap-2 py-3">
+          <i class="bi bi-geo-alt text-success fs-5"></i>
+          <div>
+            <div class="text-muted" style="font-size:0.75rem;">LOCATION</div>
+            <strong>{{ current_user.location }}</strong>
+          </div>
+        </div>
+        {% endif %}
+        {% if current_user.farm_size %}
+        <div class="list-group-item d-flex align-items-center gap-2 py-3">
+          <i class="bi bi-aspect-ratio text-success fs-5"></i>
+          <div>
+            <div class="text-muted" style="font-size:0.75rem;">TOTAL FARM AREA</div>
+            <strong class="text-success">{{ current_user.farm_size }} Hectares</strong>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="text-muted" style="font-size:0.75rem;">
+        Member since {{ current_user.created_at.strftime('%B %Y') if current_user.created_at else 'Active' }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Profile Form -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-person-gear text-success"></i> Edit Account Information
+        </h2>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('auth.profile') }}" enctype="multipart/form-data">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-person"></i></span>
+                  <input type="text" name="full_name" class="form-control" value="{{ current_user.full_name or '' }}" placeholder="Enter full name">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Phone Contact</label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-telephone"></i></span>
+                  <input type="tel" name="phone" class="form-control" value="{{ current_user.phone or '' }}" placeholder="+1 234 567 8900">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-8">
+              <div class="form-group">
+                <label class="form-label">Farm Location / Region</label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-geo-alt"></i></span>
+                  <input type="text" name="location" class="form-control" value="{{ current_user.location or '' }}" placeholder="Village / District, State, Country">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Total Farm Size (Hectares)</label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-aspect-ratio"></i></span>
+                  <input type="number" step="0.1" name="farm_size" class="form-control" value="{{ current_user.farm_size or '' }}" placeholder="e.g. 12.5">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <div class="form-group">
+                <label class="form-label">Upload Profile Photo</label>
+                <input type="file" name="profile_image" class="form-control" accept="image/*">
+                <div class="form-text">JPG, PNG format up to 5 MB.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 pt-3 border-top mt-3">
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="bi bi-check2"></i> Save Profile Changes
+            </button>
+            <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline btn-lg">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

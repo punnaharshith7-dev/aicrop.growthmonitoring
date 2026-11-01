@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+{% block title %}Add New Crop — AI Crop Growth Monitoring{% endblock %}
+{% block page_title %}Register New Crop{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+  <div>
+    <h1>Register New Crop Field</h1>
+    <p class="page-subtitle">Configure planting dates, variety, and land area to initiate automated growth stage tracking.</p>
+  </div>
+  <a href="{{ url_for('crops.list_crops') }}" class="btn btn-outline">
+    <i class="bi bi-arrow-left"></i> Back to Crops
+  </a>
+</div>
+
+<div class="row g-4 justify-content-center">
+  <!-- Left Side: Registration Form -->
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-flower1 text-success"></i> Crop Specifications & Field Data
+        </h2>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('crops.add_crop') }}" id="cropAddForm">
+          <div class="row g-3">
+            <div class="col-md-7">
+              <div class="form-group">
+                <label class="form-label">Crop Name / Field Batch <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-tag"></i></span>
+                  <input type="text" name="crop_name" class="form-control" placeholder="e.g. North Sector Paddy Plot 1" required id="cropNameInput" oninput="updateCropPreview()">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-5">
+              <div class="form-group">
+                <label class="form-label">Crop Type <span class="text-danger">*</span></label>
+                <select name="crop_type" class="form-select" id="cropTypeSelect" onchange="onCropTypeChanged()" required>
+                  {% for ct in crop_types %}
+                  <option value="{{ ct }}" {% if ct == 'rice' %}selected{% endif %}>{{ crop_profiles[ct].display_name if ct in crop_profiles else ct|title }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Crop Variety</label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-seedling"></i></span>
+                  <input type="text" name="crop_variety" id="cropVarietyInput" class="form-control" list="varietyList" placeholder="e.g. Basmati 370" oninput="updateCropPreview()">
+                  <datalist id="varietyList">
+                    {% for v in crop_profiles['rice'].varieties %}
+                    <option value="{{ v }}">
+                    {% endfor %}
+                  </datalist>
+                </div>
+                <div class="form-text" style="font-size:0.75rem;">Choose from standard varieties or type custom strain.</div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Planting / Sowing Date <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-calendar-plus"></i></span>
+                  <input type="date" name="planting_date" class="form-control" id="plantingDateInput" required onchange="updateCropPreview()">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Land Area (Hectares)</label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-bounding-box-circles"></i></span>
+                  <input type="number" step="0.01" min="0.01" name="field_area" class="form-control" placeholder="e.g. 4.5" id="fieldAreaInput" oninput="updateCropPreview()">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Field Location / Sector</label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-geo-alt"></i></span>
+                  <input type="text" name="location" class="form-control" placeholder="e.g. Sector 4B, Green Valley Farmland">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <div class="form-group">
+                <label class="form-label">Agronomic Notes & Observations</label>
+                <textarea name="notes" class="form-control" rows="3" placeholder="Soil condition, seed treatment, irrigation method, target yield goals..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 pt-3 border-top mt-3">
+            <button type="submit" class="btn btn-primary btn-lg flex-grow-1">
+              <i class="bi bi-plus-circle"></i> Save Crop & Begin Tracking
+            </button>
+            <a href="{{ url_for('crops.list_crops') }}" class="btn btn-outline btn-lg">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: Live Telemetry Preview Card -->
+  <div class="col-lg-5">
+    <div class="card sticky-top" style="top:90px;">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-eye text-success"></i> Projected Crop Cycle
+        </h2>
+        <span class="badge badge-success">Telemetry Calculated</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="crop-cover-container" style="height:180px;background:#f8fafc;position:relative;">
+          <img id="previewCropImage"
+               src="{{ url_for('static', filename='images/crops/rice.svg') }}"
+               alt="Preview"
+               class="crop-cover-img"
+               style="width:100%;height:100%;object-fit:cover;"
+               onerror="this.src='{{ url_for('static', filename='images/crops/other.svg') }}'">
+          <div class="position-absolute bottom-0 start-0 m-3 px-3 py-1 rounded-pill bg-dark bg-opacity-75 text-white" style="font-size:0.75rem;font-weight:600;" id="previewCropTypeBadge">
+            <i class="bi bi-tag-fill text-success me-1"></i> Rice (Paddy)
+          </div>
+        </div>
+
+        <div class="p-4">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h4 id="previewCropName" class="fw-bold mb-0">New Field Entry</h4>
+              <span id="previewVariety" class="badge badge-secondary mt-1">Basmati 370</span>
+            </div>
+            <span id="previewArea" class="badge badge-info">Area: — ha</span>
+          </div>
+
+          <div class="p-3 rounded-3 mt-3 border" style="background:#f8fafc;">
+            <div class="d-flex justify-content-between align-items-center mb-2" style="font-size:0.85rem;">
+              <span class="text-muted"><i class="bi bi-hourglass-split text-success me-1"></i> Total Cycle Duration:</span>
+              <strong id="previewCycleDays">120 Days</strong>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2" style="font-size:0.85rem;">
+              <span class="text-muted"><i class="bi bi-calendar-event text-success me-1"></i> Planting Date:</span>
+              <strong id="previewPlantingDate">—</strong>
+            </div>
+            <div class="d-flex justify-content-between align-items-center" style="font-size:0.85rem;">
+              <span class="text-muted"><i class="bi bi-calendar-check text-success me-1"></i> Expected Harvest Date:</span>
+              <strong id="previewHarvestDate" class="text-success">—</strong>
+            </div>
+          </div>
+
+          <!-- 6-Stage Biological Breakdown List -->
+          <div class="mt-3">
+            <div class="fw-bold text-main mb-2" style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em;">
+              Tracked Biological Stages (6 Phases)
+            </div>
+            <div class="d-flex flex-column gap-2" id="previewStagesList">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PROFILES = {{ crop_profiles|tojson }};
+
+// Set today as default planting date
+document.addEventListener('DOMContentLoaded', () => {
+  const dateInput = document.getElementById('plantingDateInput');
+  if (dateInput && !dateInput.value) {
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.value = today;
+  }
+  onCropTypeChanged();
+});
+
+function onCropTypeChanged() {
+  const typeSelect = document.getElementById('cropTypeSelect');
+  const varietyList = document.getElementById('varietyList');
+  const varietyInput = document.getElementById('cropVarietyInput');
+  const selectedType = (typeSelect.value || 'rice').toLowerCase();
+  const profile = PROFILES[selectedType] || PROFILES['other'] || { total_days: 90, varieties: [], stage_durations: {} };
+
+  // Update variety datalist options
+  if (varietyList) {
+    varietyList.innerHTML = '';
+    (profile.varieties || []).forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v;
+      varietyList.appendChild(opt);
+    });
+  }
+
+  // Pre-fill default variety if input is empty
+  if (varietyInput && (!varietyInput.value || varietyInput.dataset.autoFilled === 'true')) {
+    varietyInput.value = (profile.varieties && profile.varieties.length > 0) ? profile.varieties[0] : '';
+    varietyInput.dataset.autoFilled = 'true';
+  }
+
+  updateCropPreview();
+}
+
+function updateCropPreview() {
+  const typeSelect = document.getElementById('cropTypeSelect');
+  const dateInput = document.getElementById('plantingDateInput');
+  const nameInput = document.getElementById('cropNameInput');
+  const varietyInput = document.getElementById('cropVarietyInput');
+  const areaInput = document.getElementById('fieldAreaInput');
+
+  const selectedType = (typeSelect.value || 'rice').toLowerCase();
+  const profile = PROFILES[selectedType] || PROFILES['other'];
+  const totalDays = profile ? profile.total_days : 90;
+
+  // Image & Badge
+  const img = document.getElementById('previewCropImage');
+  if (img) img.src = `/static/images/crops/${selectedType}.svg`;
+
+  const badge = document.getElementById('previewCropTypeBadge');
+  if (badge) badge.innerHTML = `<i class="bi bi-tag-fill text-success me-1"></i> ${profile.display_name || selectedType}`;
+
+  // Name & Variety
+  document.getElementById('previewCropName').textContent = nameInput.value.trim() || 'New Field Entry';
+  document.getElementById('previewVariety').textContent = varietyInput.value.trim() || (profile.varieties ? profile.varieties[0] : 'Standard');
+  document.getElementById('previewArea').textContent = areaInput.value ? `Area: ${areaInput.value} ha` : 'Area: — ha';
+
+  // Dates & Duration
+  document.getElementById('previewCycleDays').textContent = `${totalDays} Days`;
+
+  if (dateInput.value) {
+    const pDate = new Date(dateInput.value);
+    document.getElementById('previewPlantingDate').textContent = pDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    const hDate = new Date(pDate.getTime() + totalDays * 86400000);
+    document.getElementById('previewHarvestDate').textContent = hDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  } else {
+    document.getElementById('previewPlantingDate').textContent = '—';
+    document.getElementById('previewHarvestDate').textContent = '—';
+  }
+
+  // Render 6-Stage Breakdown
+  renderStagesBreakdown(profile.stage_durations || {});
+}
+
+function renderStagesBreakdown(stageDurations) {
+  const container = document.getElementById('previewStagesList');
+  if (!container) return;
+
+  const stages = ['Germination', 'Seedling', 'Vegetative', 'Flowering', 'Fruiting', 'Harvesting'];
+  const icons = {
+    'Germination': 'bi-moisture text-info',
+    'Seedling': 'bi-sprout text-success',
+    'Vegetative': 'bi-flower1 text-primary',
+    'Flowering': 'bi-flower2 text-warning',
+    'Fruiting': 'bi-apple text-danger',
+    'Harvesting': 'bi-basket text-success'
+  };
+
+  let html = '';
+  stages.forEach((st, idx) => {
+    const days = stageDurations[st] || 15;
+    html += `
+      <div class="d-flex justify-content-between align-items-center p-2 rounded-2 border" style="background:#ffffff;font-size:0.775rem;">
+        <span class="d-flex align-items-center gap-2">
+          <i class="bi ${icons[st] || 'bi-circle'}"></i>
+          <strong>${idx + 1}. ${st}</strong>
+        </span>
+        <span class="badge badge-secondary py-1 px-2">${days} days</span>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+</script>
+{% endblock %}

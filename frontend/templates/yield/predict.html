@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% block title %}Crop Yield Prediction — AI Crop Growth Monitoring{% endblock %}
+{% block page_title %}Yield Prediction{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+  <div>
+    <h1>Crop Yield Estimator & Forecast</h1>
+    <p class="page-subtitle">Machine learning regression model trained on soil characteristics, fertilization rates, rainfall, and thermal units.</p>
+  </div>
+  <a href="{{ url_for('yield_pred.yield_history') }}" class="btn btn-outline">
+    <i class="bi bi-clock-history"></i> Forecast History
+  </a>
+</div>
+
+<div class="row g-4">
+  <!-- Left Side: Prediction Parameter Form -->
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-sliders2 text-success"></i> Agronomic Inputs
+        </h2>
+        <span class="badge badge-success">ML Regression</span>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('yield_pred.predict') }}" id="yieldForm">
+          <!-- Crop Type & Visual Image Preview -->
+          <div class="form-group">
+            <label class="form-label">Crop Type <span class="text-danger">*</span></label>
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <div style="width:48px;height:48px;border-radius:10px;overflow:hidden;background:#f8fafc;border:1px solid #e2e8f0;flex-shrink:0;">
+                <img id="yieldCropImg" src="{{ url_for('static', filename='images/crops/rice.svg') }}"
+                     alt="Crop" style="width:100%;height:100%;object-fit:cover;">
+              </div>
+              <select name="crop_type" class="form-select" id="yieldCropSelect" onchange="updateYieldCropImg()">
+                {% for ct in crop_types %}
+                <option value="{{ ct }}">{{ ct.title() }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <!-- Area & Rainfall -->
+          <div class="row g-2">
+            <div class="col-6">
+              <div class="form-group">
+                <label class="form-label">Field Area (Hectares) <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-aspect-ratio"></i></span>
+                  <input type="number" step="0.1" name="area" class="form-control" placeholder="1.0" value="1.0" min="0.1" required>
+                </div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label class="form-label">Annual Rainfall (mm)</label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-cloud-rain"></i></span>
+                  <input type="number" step="10" name="rainfall" class="form-control" placeholder="800" value="800" min="100" max="3000">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Temperature -->
+          <div class="form-group">
+            <label class="form-label">Average Season Temperature (°C)</label>
+            <div class="input-group">
+              <span class="input-group-icon"><i class="bi bi-thermometer-sun"></i></span>
+              <input type="number" step="0.5" name="temperature" class="form-control" placeholder="25.0" value="25.0" min="10" max="50">
+            </div>
+          </div>
+
+          <!-- Soil Type -->
+          <div class="form-group">
+            <label class="form-label">Soil Classification</label>
+            <div class="input-group">
+              <span class="input-group-icon"><i class="bi bi-layers"></i></span>
+              <select name="soil_type" class="form-select">
+                {% for st in soil_types %}
+                <option value="{{ st }}" {% if st=='loamy' %}selected{% endif %}>{{ st.title() }} Soil</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <!-- Fertilizer Type & Dosage -->
+          <div class="row g-2">
+            <div class="col-6">
+              <div class="form-group">
+                <label class="form-label">Fertilizer Treatment</label>
+                <select name="fertilizer" class="form-select">
+                  {% for f in fertilizers %}
+                  <option value="{{ f }}" {% if f=='npk' %}selected{% endif %}>{{ f.upper() }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label class="form-label">Dosage (kg/ha)</label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-box"></i></span>
+                  <input type="number" step="5" name="fertilizer_amount" class="form-control" placeholder="50" value="50" min="0" max="500">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-100 mt-2" id="predictBtn">
+            <i class="bi bi-cpu"></i> Generate Yield Forecast
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: Yield Historical Chart & Recent Forecasts -->
+  <div class="col-lg-7">
+    <!-- Yield Comparison Chart -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-bar-chart-fill text-success"></i> Historical Harvest Projections
+        </h2>
+        <span class="badge badge-info">Tonnes / Hectare</span>
+      </div>
+      <div class="card-body">
+        <div class="chart-container" style="height:250px;">
+          <canvas id="yieldHistoryChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Predictions Table -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-clock-history text-success"></i> Recent Forecast Log
+        </h2>
+        <a href="{{ url_for('yield_pred.yield_history') }}" class="btn btn-sm btn-outline">All Logs</a>
+      </div>
+      <div class="card-body p-0">
+        {% if history %}
+        <div class="table-container border-0">
+          <table>
+            <thead>
+              <tr>
+                <th>Crop</th>
+                <th>Area</th>
+                <th>Soil</th>
+                <th>Fertilizer</th>
+                <th>Estimated Yield</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in history %}
+              <tr>
+                <td class="fw-bold text-capitalize text-main">
+                  <div class="d-flex align-items-center gap-2">
+                    <img src="{{ url_for('static', filename='images/crops/' ~ (p.crop_type|lower if p.crop_type else 'other') ~ '.svg') }}"
+                         alt="{{ p.crop_type }}" style="width:24px;height:24px;object-fit:cover;border-radius:4px;"
+                         onerror="this.src='{{ url_for('static', filename='images/crops/other.svg') }}'">
+                    <span>{{ p.crop_type }}</span>
+                  </div>
+                </td>
+                <td>{{ p.area }} ha</td>
+                <td class="text-capitalize">{{ p.soil_type }}</td>
+                <td class="text-uppercase" style="font-size:0.8rem;">{{ p.fertilizer }}</td>
+                <td>
+                  <strong class="text-success">{{ p.predicted_yield }} t/ha</strong>
+                </td>
+                <td class="text-muted" style="font-size:0.775rem;">
+                  {{ p.predicted_at.strftime('%d %b') }}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-4">
+          <div class="empty-icon"><i class="bi bi-graph-up-arrow"></i></div>
+          <h3>No predictions recorded</h3>
+          <p>Complete the parameters on the left to calculate your first yield forecast.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateYieldCropImg() {
+  const sel = document.getElementById('yieldCropSelect');
+  const img = document.getElementById('yieldCropImg');
+  if (sel && img) {
+    img.src = `/static/images/crops/${sel.value}.svg`;
+  }
+}
+
+async function loadYieldHistoryChart() {
+  try {
+    const res = await fetch('{{ url_for("yield_pred.chart_data") }}');
+    const data = await res.json();
+    const ctx = document.getElementById('yieldHistoryChart');
+    if (!ctx) return;
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.labels.length > 0 ? data.labels : ['Rice (Sample)', 'Wheat (Sample)', 'Corn (Sample)', 'Tomato (Sample)'],
+        datasets: [{
+          label: 'Estimated Yield (tonnes/ha)',
+          data: data.yields.length > 0 ? data.yields : [4.8, 3.4, 6.2, 34.5],
+          backgroundColor: '#16a34a',
+          hoverBackgroundColor: '#15803d',
+          borderRadius: 6,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            grid: { color: 'rgba(226, 232, 240, 0.6)' },
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  } catch(err) {
+    console.error('Error loading yield chart data:', err);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateYieldCropImg();
+  loadYieldHistoryChart();
+});
+</script>
+{% endblock %}

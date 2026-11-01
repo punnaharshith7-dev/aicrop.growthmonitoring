@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+{% block title %}Disease Detection — AI Crop Growth Monitoring{% endblock %}
+{% block page_title %}Disease Detection{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+  <div>
+    <h1>Crop Disease Diagnostic Scanner</h1>
+    <p class="page-subtitle">Upload leaf or foliage imagery to run deep learning computer vision analysis.</p>
+  </div>
+  <a href="{{ url_for('disease.history') }}" class="btn btn-outline">
+    <i class="bi bi-clock-history"></i> Scan History
+  </a>
+</div>
+
+<!-- Model Status Alert Banner -->
+{% if model_status and model_status.available %}
+<div class="alert alert-success d-flex align-items-center justify-content-between py-2 px-3 mb-4 rounded-3" style="font-size:0.875rem;">
+  <div class="d-flex align-items-center gap-2">
+    <span class="badge badge-success py-1 px-2"><i class="bi bi-cpu-fill"></i> CNN Model Online</span>
+    <span>Computer Vision inference engine active ({{ model_status.supported_classes_count }} agronomic classes calibrated).</span>
+  </div>
+  <span class="text-muted d-none d-md-inline" style="font-size:0.775rem;">Engine: {{ model_status.type|upper }}</span>
+</div>
+{% else %}
+<div class="alert alert-warning py-3 px-4 mb-4 rounded-3 border-warning" style="font-size:0.875rem;background:#fffbeb;">
+  <div class="d-flex align-items-start gap-3">
+    <i class="bi bi-exclamation-triangle-fill text-warning fs-4 mt-1"></i>
+    <div class="flex-grow-1">
+      <h5 class="fw-bold mb-1 text-warning-emphasis">Trained Vision Model Required</h5>
+      <p class="mb-2 text-secondary">
+        Predictions require an authentic trained CNN classification model. No random predictions are generated.
+        Run the training pipeline with your foliage dataset:
+      </p>
+      <div class="bg-dark text-white p-2 rounded-2 font-monospace d-flex justify-content-between align-items-center" style="font-size:0.8rem;">
+        <code>python ml/disease_detection/train.py --epochs 15</code>
+        <button type="button" class="btn btn-sm btn-outline-light py-0 px-2" onclick="navigator.clipboard.writeText('python ml/disease_detection/train.py --epochs 15'); alert('Training command copied!')">Copy</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <!-- Left Column: Image Upload & AI Scanner Form -->
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-camera text-success"></i> Upload Leaf Image
+        </h2>
+        <span class="badge badge-success">AI Vision Ready</span>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('disease.detect') }}" enctype="multipart/form-data" id="diseaseScanForm">
+          <!-- Interactive Upload Drop Zone -->
+          <div class="upload-zone" id="dropZone" onclick="document.getElementById('imageInput').click()">
+            <div class="upload-icon">
+              <i class="bi bi-cloud-arrow-up"></i>
+            </div>
+            <h4 class="fs-5 fw-bold mb-1">Click to upload or drag & drop leaf photo</h4>
+            <p class="text-muted mb-2" style="font-size:0.85rem;">PNG, JPG, JPEG, BMP formats up to 16 MB</p>
+
+            <!-- Image Preview Box -->
+            <div id="previewContainer" class="d-none mt-3">
+              <img id="imagePreview" src="" alt="Foliage Preview" style="max-width:100%;max-height:260px;border-radius:12px;object-fit:cover;box-shadow:var(--shadow-md);">
+              <div id="fileNameDisplay" class="text-muted mt-2 fw-semibold" style="font-size:0.8rem;"></div>
+            </div>
+          </div>
+          <input type="file" id="imageInput" name="image" accept="image/*" class="d-none" required onchange="handleImageFile(this)">
+
+          <!-- Sample Test Imagery Quick Load -->
+          <div class="p-3 rounded-3 mt-3 border" style="background:#f8fafc;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;">Quick Test Samples:</span>
+              <span class="text-muted" style="font-size:0.75rem;">Click to test instant preview</span>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+              <button type="button" class="btn btn-sm btn-outline d-flex align-items-center gap-1" onclick="loadSampleImage('sample_healthy_leaf.svg', 'Healthy Leaf Sample')">
+                <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;"></span>
+                Sample Healthy Leaf
+              </button>
+              <button type="button" class="btn btn-sm btn-outline d-flex align-items-center gap-1" onclick="loadSampleImage('sample_diseased_leaf.svg', 'Blight Leaf Sample')">
+                <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;display:inline-block;"></span>
+                Sample Diseased Leaf
+              </button>
+            </div>
+          </div>
+
+          <!-- Link to Crop Selection -->
+          {% if crops %}
+          <div class="form-group mt-3">
+            <label class="form-label">Associate Diagnosis with Monitored Crop (Optional)</label>
+            <div class="input-group">
+              <span class="input-group-icon"><i class="bi bi-flower1"></i></span>
+              <select name="crop_id" class="form-select">
+                <option value="">-- General Diagnostic Scan (Unlinked) --</option>
+                {% for c in crops %}
+                <option value="{{ c.id }}">{{ c.crop_name }} ({{ c.crop_type|title }}) — {{ c.location or 'Field' }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-text">Associating a diagnosis will update the crop's health status in your dashboard.</div>
+          </div>
+          {% endif %}
+
+          <button type="submit" class="btn btn-primary btn-lg w-100 mt-3" id="analyzeBtn">
+            <i class="bi bi-cpu"></i> Analyze Foliage with AI Model
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Supported Disease Classes Information Card -->
+    <div class="card mt-4">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-check2-circle text-success"></i> Supported Diagnostic Classes
+        </h2>
+      </div>
+      <div class="card-body">
+        <p class="text-muted mb-3" style="font-size:0.85rem;">Our computer vision neural network is trained on extensive agronomic datasets including:</p>
+        <div class="d-flex flex-wrap gap-2">
+          {% set classes = [
+            'Tomato Early Blight', 'Tomato Late Blight', 'Tomato Leaf Mold', 'Tomato Spider Mites',
+            'Tomato Yellow Leaf Curl', 'Potato Early Blight', 'Potato Late Blight',
+            'Corn Common Rust', 'Corn Northern Leaf Blight', 'Corn Gray Leaf Spot',
+            'Rice Brown Spot', 'Rice Blast', 'Rice Bacterial Leaf Blight',
+            'Wheat Yellow Rust', 'Wheat Leaf Rust', 'Healthy Foliage'
+          ] %}
+          {% for cl in classes %}
+          <span class="badge {% if cl == 'Healthy Foliage' %}badge-success{% else %}badge-secondary{% endif %} py-2 px-3">
+            {{ cl }}
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Recent Scans -->
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-clock-history text-success"></i> Recent Diagnostic Scans
+        </h2>
+        <a href="{{ url_for('disease.history') }}" class="btn btn-sm btn-outline">Full History</a>
+      </div>
+      <div class="card-body p-0">
+        {% if history %}
+        <div class="p-3 d-flex flex-column gap-2" style="max-height:600px;overflow-y:auto;">
+          {% for d in history %}
+          <div class="p-3 rounded-3 border d-flex gap-3 align-items-center" style="background:#ffffff;">
+            <div style="width:58px;height:58px;border-radius:10px;overflow:hidden;flex-shrink:0;background:#f8fafc;border:1px solid #e2e8f0;">
+              {% if d.image_path %}
+              <img src="{{ url_for('static', filename=d.image_path) }}"
+                   alt="Scan"
+                   style="width:100%;height:100%;object-fit:cover;"
+                   onerror="this.src='{{ url_for('static', filename='images/samples/sample_healthy_leaf.svg') }}'">
+              {% else %}
+              <div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted fs-4">🌿</div>
+              {% endif %}
+            </div>
+            <div class="flex-grow-1 min-width-0">
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-bold text-truncate text-main" style="font-size:0.9rem;">{{ d.disease_name }}</span>
+                <span class="badge {% if d.is_healthy %}badge-success{% else %}badge-danger{% endif %} ms-2">
+                  {{ 'Healthy' if d.is_healthy else 'Diseased' }}
+                </span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mt-1" style="font-size:0.775rem;color:var(--text-muted);">
+                <span>Confidence: <strong>{{ '%.1f'|format(d.confidence or 0) }}%</strong></span>
+                <span>{{ d.detected_at.strftime('%d %b %H:%M') }}</span>
+              </div>
+            </div>
+            <a href="{{ url_for('disease.result', detection_id=d.id) }}" class="btn btn-sm btn-outline px-2" title="View Full Report">
+              <i class="bi bi-chevron-right"></i>
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state py-5">
+          <div class="empty-icon"><i class="bi bi-camera"></i></div>
+          <h3>No previous scans</h3>
+          <p>Your uploaded scans and historical diagnoses will be securely logged here.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const dropZone = document.getElementById('dropZone');
+const imageInput = document.getElementById('imageInput');
+
+if (dropZone) {
+  ['dragenter', 'dragover'].forEach(name => {
+    dropZone.addEventListener(name, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add('dragover');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(name => {
+    dropZone.addEventListener(name, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('dragover');
+    });
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      imageInput.files = e.dataTransfer.files;
+      handleImageFile(imageInput);
+    }
+  });
+}
+
+function handleImageFile(input) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      const preview = document.getElementById('imagePreview');
+      const container = document.getElementById('previewContainer');
+      const filename = document.getElementById('fileNameDisplay');
+
+      preview.src = e.target.result;
+      filename.textContent = `${file.name} (${Math.round(file.size / 1024)} KB)`;
+      container.classList.remove('d-none');
+    };
+
+    reader.readAsDataURL(file);
+  }
+}
+
+async function loadSampleImage(filename, sampleName) {
+  try {
+    const response = await fetch(`/static/images/samples/${filename}`);
+    const blob = await response.blob();
+    const file = new File([blob], filename, { type: 'image/svg+xml' });
+
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    imageInput.files = dataTransfer.files;
+
+    handleImageFile(imageInput);
+  } catch(err) {
+    console.error('Error loading sample image:', err);
+  }
+}
+</script>
+{% endblock %}

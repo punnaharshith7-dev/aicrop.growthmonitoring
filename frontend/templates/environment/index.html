@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+{% block title %}Environmental IoT Telemetry — AI Crop Growth Monitoring{% endblock %}
+{% block page_title %}Environmental IoT Telemetry{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+  <div>
+    <h1>Field Micro-Climate & IoT Telemetry</h1>
+    <p class="page-subtitle">Continuous environmental sensing: Soil moisture, ambient temperature, relative humidity, and rainfall.</p>
+  </div>
+  <button class="btn btn-primary" onclick="document.getElementById('readingFormCard').scrollIntoView({behavior: 'smooth'})">
+    <i class="bi bi-plus-circle"></i> Log New Sensor Reading
+  </button>
+</div>
+
+<!-- Rule-Based Agronomic Telemetry Alerts -->
+{% if recs %}
+<div class="mb-4 d-flex flex-column gap-2">
+  {% for level, title, msg in recs %}
+  <div class="alert alert-{{ level }} mb-0">
+    <i class="bi bi-{% if level=='danger' %}exclamation-octagon-fill{% elif level=='warning' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %} fs-5"></i>
+    <div class="flex-grow-1">
+      <div class="fw-bold">{{ title }}</div>
+      <div style="font-size:0.85rem;">{{ msg }}</div>
+    </div>
+    <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Live KPI Sensor Cards -->
+{% if latest %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon green"><i class="bi bi-moisture"></i></div>
+      <div>
+        <div class="stat-value text-success">{{ latest.soil_moisture or '—' }}%</div>
+        <div class="stat-label">Soil Moisture</div>
+        <div class="stat-trend up"><i class="bi bi-check-circle"></i> Optimal (35–65%)</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon danger"><i class="bi bi-thermometer-sun"></i></div>
+      <div>
+        <div class="stat-value text-danger">{{ latest.temperature or '—' }}°C</div>
+        <div class="stat-label">Temperature</div>
+        <div class="stat-trend"><i class="bi bi-broadcast"></i> Ambient Probe</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon info"><i class="bi bi-droplet-half"></i></div>
+      <div>
+        <div class="stat-value text-info">{{ latest.humidity or '—' }}%</div>
+        <div class="stat-label">Relative Humidity</div>
+        <div class="stat-trend"><i class="bi bi-cloud"></i> Atmosphere</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon accent"><i class="bi bi-cloud-rain-heavy"></i></div>
+      <div>
+        <div class="stat-value" style="color:#65a30d;">{{ latest.rainfall or '0' }} mm</div>
+        <div class="stat-label">Precipitation</div>
+        <div class="stat-trend"><i class="bi bi-droplet"></i> Rain Gauge</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-4 mb-4">
+  <!-- Multi-Series Sensor History Chart -->
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header flex-wrap gap-2">
+        <div>
+          <h2 class="card-title">
+            <i class="bi bi-graph-up text-success"></i> Multi-Sensor Trend History
+          </h2>
+          <span style="font-size:0.75rem;color:var(--text-muted);">Real-time sensor telemetry aggregated across fields</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <label for="dayRangeSelect" class="form-label mb-0 text-muted" style="font-size:0.8rem;">Timeframe:</label>
+          <select id="dayRangeSelect" class="form-select form-select-sm" style="width:auto;" onchange="reloadSensorChart()">
+            <option value="7">Last 7 Days</option>
+            <option value="14">Last 14 Days</option>
+            <option value="30">Last 30 Days</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="chart-container" style="height:320px;">
+          <canvas id="multiSensorChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Sensor Reading Form -->
+  <div class="col-lg-4" id="readingFormCard">
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-plus-circle text-success"></i> Log Sensor Data
+        </h2>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('environment.add_reading') }}">
+          <div class="form-group">
+            <label class="form-label">Observation Timestamp</label>
+            <div class="input-group">
+              <span class="input-group-icon"><i class="bi bi-calendar3"></i></span>
+              <input type="datetime-local" name="reading_date" class="form-control" id="readingDateInput">
+            </div>
+          </div>
+
+          <div class="row g-2">
+            <div class="col-6">
+              <div class="form-group">
+                <label class="form-label text-success"><i class="bi bi-moisture me-1"></i> Soil Moisture (%)</label>
+                <input type="number" step="0.1" name="soil_moisture" class="form-control" placeholder="e.g. 48.0" min="0" max="100" required>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label class="form-label text-danger"><i class="bi bi-thermometer-sun me-1"></i> Temp (°C)</label>
+                <input type="number" step="0.1" name="temperature" class="form-control" placeholder="e.g. 26.5" min="-10" max="60" required>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label class="form-label text-info"><i class="bi bi-droplet me-1"></i> Humidity (%)</label>
+                <input type="number" step="0.1" name="humidity" class="form-control" placeholder="e.g. 62.0" min="0" max="100" required>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label class="form-label" style="color:#65a30d;"><i class="bi bi-cloud-rain me-1"></i> Rain (mm)</label>
+                <input type="number" step="0.1" name="rainfall" class="form-control" placeholder="e.g. 10.0" min="0">
+              </div>
+            </div>
+          </div>
+
+          {% if crops %}
+          <div class="form-group">
+            <label class="form-label">Associate with Crop Field</label>
+            <select name="crop_id" class="form-select">
+              <option value="">-- General Field Station --</option>
+              {% for c in crops %}
+              <option value="{{ c.id }}">{{ c.crop_name }} ({{ c.crop_type|title }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+
+          <div class="form-group">
+            <label class="form-label">Telemetry Remarks / Notes</label>
+            <input type="text" name="notes" class="form-control" placeholder="e.g. Post-irrigation cycle reading">
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-100 mt-2">
+            <i class="bi bi-save"></i> Save Sensor Reading
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Historical Telemetry Log Table -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">
+      <i class="bi bi-table text-success"></i> Telemetry Log Records
+    </h2>
+    <a href="{{ url_for('reports.download_csv', report_type='environment') }}" class="btn btn-sm btn-outline">
+      <i class="bi bi-download"></i> Export CSV
+    </a>
+  </div>
+  <div class="card-body p-0">
+    {% if readings %}
+    <div class="table-container border-0">
+      <table>
+        <thead>
+          <tr>
+            <th>Date & Time</th>
+            <th>Soil Moisture</th>
+            <th>Temperature</th>
+            <th>Humidity</th>
+            <th>Rainfall</th>
+            <th>Crop Linked</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in readings %}
+          <tr>
+            <td class="fw-semibold">{{ r.reading_date.strftime('%d %b %Y, %H:%M') }}</td>
+            <td>
+              <span class="badge {% if r.soil_moisture and r.soil_moisture < 35 %}badge-danger{% elif r.soil_moisture and r.soil_moisture > 75 %}badge-warning{% else %}badge-success{% endif %}">
+                {{ r.soil_moisture or '—' }}%
+              </span>
+            </td>
+            <td><strong>{{ r.temperature or '—' }}°C</strong></td>
+            <td>{{ r.humidity or '—' }}%</td>
+            <td>{{ r.rainfall or '0' }} mm</td>
+            <td>{{ r.crop.crop_name if r.crop else 'Station' }}</td>
+            <td class="text-muted" style="font-size:0.8rem;">{{ r.notes or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state py-4">
+      <div class="empty-icon"><i class="bi bi-thermometer-sun"></i></div>
+      <h3>No readings recorded yet</h3>
+      <p>Log your first sensor reading above to activate environmental telemetry tracking.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let sensorChartInstance = null;
+
+async function reloadSensorChart() {
+  const days = document.getElementById('dayRangeSelect')?.value || 7;
+  try {
+    const res = await fetch(`{{ url_for("environment.chart_data") }}?days=${days}`);
+    const data = await res.json();
+    const ctx = document.getElementById('multiSensorChart');
+    if (!ctx) return;
+
+    if (sensorChartInstance) sensorChartInstance.destroy();
+
+    sensorChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: data.labels.length > 0 ? data.labels : ['No data'],
+        datasets: [
+          {
+            label: 'Soil Moisture (%)',
+            data: data.soil_moisture,
+            borderColor: '#16a34a',
+            backgroundColor: 'transparent',
+            tension: 0.35,
+            borderWidth: 2.5,
+            pointRadius: 3
+          },
+          {
+            label: 'Temperature (°C)',
+            data: data.temperature,
+            borderColor: '#ef4444',
+            backgroundColor: 'transparent',
+            tension: 0.35,
+            borderWidth: 2,
+            pointRadius: 3
+          },
+          {
+            label: 'Humidity (%)',
+            data: data.humidity,
+            borderColor: '#0ea5e9',
+            backgroundColor: 'transparent',
+            tension: 0.35,
+            borderWidth: 2,
+            pointRadius: 3
+          },
+          {
+            label: 'Rainfall (mm)',
+            data: data.rainfall,
+            borderColor: '#84cc16',
+            backgroundColor: 'transparent',
+            tension: 0.35,
+            borderWidth: 2,
+            pointRadius: 3
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: { boxWidth: 12, usePointStyle: true, font: { weight: '600' } }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { grid: { color: 'rgba(226, 232, 240, 0.6)' } }
+        }
+      }
+    });
+  } catch(err) {
+    console.error('Error loading environment chart data:', err);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const dateInput = document.getElementById('readingDateInput');
+  if (dateInput && !dateInput.value) {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    dateInput.value = now.toISOString().slice(0, 16);
+  }
+  reloadSensorChart();
+});
+</script>
+{% endblock %}

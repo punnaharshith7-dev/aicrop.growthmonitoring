@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Yield Forecast History — AI Crop Growth Monitoring{% endblock %}
+{% block page_title %}Yield Forecast History{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+  <div>
+    <div class="d-flex align-items-center gap-2">
+      <h1>Harvest Forecast History</h1>
+      <span class="badge badge-success">{{ predictions|length }} Records</span>
+    </div>
+    <p class="page-subtitle">Historical machine learning harvest estimates across your acreage and crop rotations.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('reports.download_csv', report_type='yield') }}" class="btn btn-outline">
+      <i class="bi bi-download"></i> Export CSV
+    </a>
+    <a href="{{ url_for('yield_pred.predict') }}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> New Forecast
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">
+      <i class="bi bi-table text-success"></i> Recorded Forecast Log
+    </h2>
+  </div>
+  <div class="card-body p-0">
+    {% if predictions %}
+    <div class="table-container border-0">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Crop</th>
+            <th>Area</th>
+            <th>Soil Type</th>
+            <th>Rainfall</th>
+            <th>Temp</th>
+            <th>Fertilizer</th>
+            <th>Yield / Ha</th>
+            <th>Total Estimated Harvest</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in predictions %}
+          <tr>
+            <td class="fw-semibold text-muted" style="font-size:0.8rem;">
+              {{ p.predicted_at.strftime('%d %b %Y') }}
+            </td>
+            <td class="fw-bold text-capitalize text-main">
+              <div class="d-flex align-items-center gap-2">
+                <img src="{{ url_for('static', filename='images/crops/' ~ (p.crop_type|lower if p.crop_type else 'other') ~ '.svg') }}"
+                     alt="{{ p.crop_type }}" style="width:24px;height:24px;object-fit:cover;border-radius:4px;"
+                     onerror="this.src='{{ url_for('static', filename='images/crops/other.svg') }}'">
+                <span>{{ p.crop_type }}</span>
+              </div>
+            </td>
+            <td>{{ p.area }} ha</td>
+            <td class="text-capitalize">{{ p.soil_type }}</td>
+            <td>{{ p.rainfall or '—' }} mm</td>
+            <td>{{ p.temperature or '—' }}°C</td>
+            <td class="text-uppercase" style="font-size:0.8rem;">{{ p.fertilizer }} ({{ p.fertilizer_amount|int }} kg)</td>
+            <td>
+              <span class="badge badge-success">{{ p.predicted_yield }} t/ha</span>
+            </td>
+            <td>
+              <strong class="text-main">{{ '%.2f'|format(p.predicted_yield * (p.area or 1.0)) }} Tonnes</strong>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state py-5">
+      <div class="empty-icon"><i class="bi bi-graph-up-arrow"></i></div>
+      <h3>No yield predictions yet</h3>
+      <p>Configure input parameters in the estimator to calculate your first forecast.</p>
+      <a href="{{ url_for('yield_pred.predict') }}" class="btn btn-primary mt-3">Start Prediction</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

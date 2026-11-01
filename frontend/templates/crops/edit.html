@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block title %}Edit {{ crop.crop_name }} — AI Crop Growth Monitoring{% endblock %}
+{% block page_title %}Edit Crop Parameters{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+  <div>
+    <h1>Edit {{ crop.crop_name }}</h1>
+    <p class="page-subtitle">Update variety, planting date, growth stage, or field observations.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('crops.crop_detail', crop_id=crop.id) }}" class="btn btn-outline">
+      <i class="bi bi-eye"></i> View Telemetry
+    </a>
+    <a href="{{ url_for('crops.list_crops') }}" class="btn btn-outline">
+      <i class="bi bi-arrow-left"></i> All Crops
+    </a>
+  </div>
+</div>
+
+<div class="row g-4 justify-content-center">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-pencil-square text-success"></i> Modify Field Parameters
+        </h2>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('crops.edit_crop', crop_id=crop.id) }}">
+          <div class="row g-3">
+            <div class="col-md-7">
+              <div class="form-group">
+                <label class="form-label">Crop Name <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-tag"></i></span>
+                  <input type="text" name="crop_name" class="form-control" value="{{ crop.crop_name }}" required>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-5">
+              <div class="form-group">
+                <label class="form-label">Crop Type</label>
+                <select name="crop_type" class="form-select" id="cropTypeSelect">
+                  {% for ct in crop_types %}
+                  <option value="{{ ct }}" {% if crop.crop_type == ct %}selected{% endif %}>
+                    {{ crop_profiles[ct].display_name if ct in crop_profiles else ct|title }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Crop Variety</label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-seedling"></i></span>
+                  <input type="text" name="crop_variety" class="form-control" value="{{ crop.crop_variety or '' }}" placeholder="e.g. Basmati 370">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Planting / Sowing Date</label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-calendar-event"></i></span>
+                  <input type="date" name="planting_date" class="form-control" value="{{ crop.planting_date.strftime('%Y-%m-%d') }}">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Field Area (Hectares)</label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-bounding-box-circles"></i></span>
+                  <input type="number" step="0.01" min="0.01" name="field_area" class="form-control" value="{{ crop.field_area or '' }}" placeholder="e.g. 3.5">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Growth Stage</label>
+                <select name="growth_stage" class="form-select">
+                  {% for st in growth_stages %}
+                  <option value="{{ st }}" {% if crop.growth_stage == st %}selected{% endif %}>
+                    {{ loop.index }}. {{ st }}
+                  </option>
+                  {% endfor %}
+                </select>
+                <div class="form-text" style="font-size:0.75rem;">Can be overridden manually or calculated from sowing date.</div>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Health Status</label>
+                <select name="health_status" class="form-select">
+                  <option value="Healthy" {% if crop.health_status == 'Healthy' %}selected{% endif %}>🟢 Healthy (Optimal)</option>
+                  <option value="At Risk" {% if crop.health_status == 'At Risk' %}selected{% endif %}>🟡 At Risk (Caution)</option>
+                  <option value="Diseased" {% if crop.health_status == 'Diseased' %}selected{% endif %}>🔴 Diseased (Treatment Needed)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <div class="form-group">
+                <label class="form-label">Sector / Location</label>
+                <div class="input-group">
+                  <span class="input-group-icon"><i class="bi bi-geo-alt"></i></span>
+                  <input type="text" name="location" class="form-control" value="{{ crop.location or '' }}" placeholder="e.g. Sector 4B, North Field">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <div class="form-group">
+                <label class="form-label">Agronomic Notes</label>
+                <textarea name="notes" class="form-control" rows="3" placeholder="Field observations...">{{ crop.notes or '' }}</textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-3">
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="bi bi-check2"></i> Save Parameter Changes
+            </button>
+            <button type="button" class="btn btn-outline-danger" onclick="if(confirm('Are you sure you want to delete this crop? All associated logs will be removed.')) { document.getElementById('deleteCropForm').submit(); }">
+              <i class="bi bi-trash"></i> Delete Crop
+            </button>
+          </div>
+        </form>
+
+        <form id="deleteCropForm" method="POST" action="{{ url_for('crops.delete_crop', crop_id=crop.id) }}" style="display:none;"></form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%">
+  <defs>
+    <linearGradient id="cornBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ecfccb"/>
+      <stop offset="100%" stop-color="#d9f99d"/>
+    </linearGradient>
+    <linearGradient id="cornEar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#facc15"/>
+      <stop offset="50%" stop-color="#fef08a"/>
+      <stop offset="100%" stop-color="#eab308"/>
+    </linearGradient>
+    <linearGradient id="husk" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#cornBg)"/>
+  <g transform="translate(200, 150)">
+    <path d="M 0 150 L 0 -130" stroke="#15803d" stroke-width="12" stroke-linecap="round"/>
+    <path d="M 0 60 C -60 40 -120 70 -160 110 C -120 80 -60 70 0 80" fill="url(#husk)"/>
+    <path d="M 0 20 C 60 0 120 30 170 70 C 120 40 60 30 0 40" fill="url(#husk)"/>
+    <path d="M 0 -40 C -70 -70 -130 -60 -170 -30 C -130 -50 -70 -50 0 -30" fill="url(#husk)"/>
+    <path d="M 0 -80 C 70 -110 130 -100 160 -70 C 120 -90 60 -90 0 -70" fill="url(#husk)"/>
+    <g transform="translate(20, -10) rotate(15)">
+      <path d="M -18 70 C -22 0 -18 -60 0 -80 C 18 -60 22 0 18 70 Z" fill="url(#cornEar)"/>
+      <g fill="#ca8a04" opacity="0.4">
+        <circle cx="-8" cy="-50" r="3"/><circle cx="0" cy="-52" r="3"/><circle cx="8" cy="-50" r="3"/>
+        <circle cx="-10" cy="-35" r="3.5"/><circle cx="-2" cy="-36" r="3.5"/><circle cx="6" cy="-35" r="3.5"/>
+        <circle cx="-12" cy="-18" r="4"/><circle cx="-3" cy="-19" r="4"/><circle cx="5" cy="-18" r="4"/><circle cx="13" cy="-18" r="3.5"/>
+        <circle cx="-12" cy="0" r="4"/><circle cx="-3" cy="0" r="4"/><circle cx="6" cy="0" r="4"/><circle cx="13" cy="0" r="3.5"/>
+        <circle cx="-12" cy="18" r="4"/><circle cx="-3" cy="18" r="4"/><circle cx="6" cy="18" r="4"/><circle cx="13" cy="18" r="3.5"/>
+        <circle cx="-10" cy="36" r="3.5"/><circle cx="-2" cy="36" r="3.5"/><circle cx="6" cy="36" r="3.5"/>
+        <circle cx="-8" cy="52" r="3"/><circle cx="0" cy="52" r="3"/><circle cx="8" cy="52" r="3"/>
+      </g>
+      <path d="M -5 -80 C -12 -100 -20 -115 -25 -125 M 0 -80 C -2 -105 -5 -120 -8 -130 M 5 -80 C 10 -105 15 -118 20 -128" stroke="#a16207" stroke-width="1.5" fill="none"/>
+      <path d="M -20 70 C -35 20 -30 -30 -15 -60 C -18 -20 -20 30 -5 75 Z" fill="#22c55e"/>
+      <path d="M 18 70 C 32 20 28 -30 14 -60 C 17 -20 18 30 5 75 Z" fill="#16a34a"/>
+    </g>
+  </g>
+</svg>

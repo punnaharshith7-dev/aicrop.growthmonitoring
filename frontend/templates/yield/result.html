@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% block title %}Harvest Forecast Result — AI Crop Growth Monitoring{% endblock %}
+{% block page_title %}Yield Forecast Result{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+  <div>
+    <div class="d-flex align-items-center gap-2">
+      <h1>Harvest Yield Projections</h1>
+      <span class="badge badge-success">{{ model_used }}</span>
+    </div>
+    <p class="page-subtitle">Estimated harvest productivity based on supplied environmental and pedological factors.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button onclick="window.print()" class="btn btn-outline">
+      <i class="bi bi-printer"></i> Print Forecast
+    </button>
+    <a href="{{ url_for('yield_pred.predict') }}" class="btn btn-primary">
+      <i class="bi bi-arrow-repeat"></i> New Prediction
+    </a>
+  </div>
+</div>
+
+<div class="row g-4 justify-content-center">
+  <!-- Main Yield KPI Card -->
+  <div class="col-lg-5">
+    <div class="card text-center p-4 h-100">
+      <div class="crop-cover-container mx-auto mb-3 rounded-4 overflow-hidden" style="width:100%;height:180px;">
+        <img src="{{ url_for('static', filename='images/crops/' ~ (record.crop_type|lower if record.crop_type else 'other') ~ '.svg') }}"
+             alt="{{ record.crop_type }}"
+             class="crop-cover-img"
+             onerror="this.src='{{ url_for('static', filename='images/crops/other.svg') }}'">
+        <div class="crop-type-chip">
+          <i class="bi bi-tag-fill text-success"></i> {{ record.crop_type|title }}
+        </div>
+      </div>
+
+      <span class="badge badge-success mb-2 py-1 px-3 fs-6 d-inline-block">Projected Productivity</span>
+      
+      <div class="my-2">
+        <span class="display-4 fw-bold text-success">{{ record.predicted_yield }}</span>
+        <span class="fs-5 text-muted">tonnes / ha</span>
+      </div>
+
+      <div class="p-3 rounded-3 border my-3" style="background:#f0fdf4;border-color:rgba(22, 163, 74, 0.2);">
+        <div style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;">Total Farm Production ({{ record.area }} ha)</div>
+        <div class="fs-2 fw-bold text-main mt-1">{{ total_yield }} Tonnes</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);">Estimated gross commodity harvest</div>
+      </div>
+
+      <div class="d-flex justify-content-between text-muted py-2 px-3 rounded-2 border" style="background:#f8fafc;font-size:0.8rem;">
+        <span>Generated: {{ record.predicted_at.strftime('%d %b %Y, %H:%M') }}</span>
+        <span>Engine: {{ model_used }}</span>
+      </div>
+
+      <div class="d-flex gap-2 mt-3">
+        <a href="{{ url_for('yield_pred.predict') }}" class="btn btn-outline flex-grow-1">
+          <i class="bi bi-arrow-left"></i> Recalculate
+        </a>
+        <a href="{{ url_for('recommendations.index') }}" class="btn btn-primary flex-grow-1">
+          <i class="bi bi-lightbulb"></i> View Advisory
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Factors Breakdown & Farm Advice -->
+  <div class="col-lg-7">
+    <!-- Factor Parameters Grid -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-sliders text-success"></i> Evaluated Model Factors
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-6 col-sm-4">
+            <div class="p-3 rounded-3 border" style="background:#f8fafc;">
+              <span class="text-muted d-block" style="font-size:0.75rem;font-weight:600;text-transform:uppercase;">Crop Variety</span>
+              <strong class="text-capitalize text-main fs-6">{{ record.crop_type }}</strong>
+            </div>
+          </div>
+          <div class="col-6 col-sm-4">
+            <div class="p-3 rounded-3 border" style="background:#f8fafc;">
+              <span class="text-muted d-block" style="font-size:0.75rem;font-weight:600;text-transform:uppercase;">Planted Acreage</span>
+              <strong class="text-main fs-6">{{ record.area }} Hectares</strong>
+            </div>
+          </div>
+          <div class="col-6 col-sm-4">
+            <div class="p-3 rounded-3 border" style="background:#f8fafc;">
+              <span class="text-muted d-block" style="font-size:0.75rem;font-weight:600;text-transform:uppercase;">Annual Rain</span>
+              <strong class="text-main fs-6">{{ record.rainfall or '800' }} mm</strong>
+            </div>
+          </div>
+          <div class="col-6 col-sm-4">
+            <div class="p-3 rounded-3 border" style="background:#f8fafc;">
+              <span class="text-muted d-block" style="font-size:0.75rem;font-weight:600;text-transform:uppercase;">Avg Temperature</span>
+              <strong class="text-main fs-6">{{ record.temperature or '25.0' }} °C</strong>
+            </div>
+          </div>
+          <div class="col-6 col-sm-4">
+            <div class="p-3 rounded-3 border" style="background:#f8fafc;">
+              <span class="text-muted d-block" style="font-size:0.75rem;font-weight:600;text-transform:uppercase;">Soil Type</span>
+              <strong class="text-capitalize text-main fs-6">{{ record.soil_type }}</strong>
+            </div>
+          </div>
+          <div class="col-6 col-sm-4">
+            <div class="p-3 rounded-3 border" style="background:#f8fafc;">
+              <span class="text-muted d-block" style="font-size:0.75rem;font-weight:600;text-transform:uppercase;">Fertilizer Treatment</span>
+              <strong class="text-uppercase text-main fs-6">{{ record.fertilizer }} ({{ record.fertilizer_amount|int }} kg/ha)</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Optimization Strategies Card -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-lightbulb-fill text-warning"></i> Agronomic Productivity Strategies
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="d-flex flex-column gap-3">
+          <div class="d-flex gap-3 align-items-start p-3 rounded-3 border" style="background:#f8fafc;">
+            <div style="width:32px;height:32px;border-radius:8px;background:var(--primary-soft);color:var(--primary-dark);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="bi bi-droplet-half"></i>
+            </div>
+            <div>
+              <div class="fw-bold text-main" style="font-size:0.9rem;">Irrigation Optimization</div>
+              <div class="text-muted" style="font-size:0.85rem;">Maintain consistent soil moisture levels above 40% during reproductive and flowering phases to boost yield by up to 15%.</div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-3 align-items-start p-3 rounded-3 border" style="background:#f8fafc;">
+            <div style="width:32px;height:32px;border-radius:8px;background:var(--warning-soft);color:var(--warning-dark);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="bi bi-moisture"></i>
+            </div>
+            <div>
+              <div class="fw-bold text-main" style="font-size:0.9rem;">Fertilizer Split Applications</div>
+              <div class="text-muted" style="font-size:0.85rem;">Split your {{ record.fertilizer|upper }} dosage across vegetative and panicle initiation stages instead of a single basal dressing to prevent nutrient leaching.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

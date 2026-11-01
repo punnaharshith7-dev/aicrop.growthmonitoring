@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <linearGradient id="dLeaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#84cc16"/>
+      <stop offset="60%" stop-color="#65a30d"/>
+      <stop offset="100%" stop-color="#365314"/>
+    </linearGradient>
+    <radialGradient id="blightSpot" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#451a03"/>
+      <stop offset="60%" stop-color="#78350f"/>
+      <stop offset="85%" stop-color="#ca8a04"/>
+      <stop offset="100%" stop-color="#facc15" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="400" fill="#f8fafc"/>
+  <g transform="translate(200, 200)">
+    <path d="M 0 160 Q 5 60 0 -140 C -120 -80 -130 50 0 160 C 130 50 120 -80 0 -140 Z" fill="url(#dLeaf)"/>
+    <path d="M 0 160 L 0 -135" stroke="#a3e635" stroke-width="4" stroke-linecap="round"/>
+    <!-- Concentric blight lesions -->
+    <circle cx="-45" cy="-20" r="32" fill="url(#blightSpot)"/>
+    <circle cx="-45" cy="-20" r="22" stroke="#b45309" stroke-width="2" fill="none"/>
+    <circle cx="35" cy="40" r="28" fill="url(#blightSpot)"/>
+    <circle cx="35" cy="40" r="18" stroke="#b45309" stroke-width="2" fill="none"/>
+    <circle cx="-30" cy="70" r="22" fill="url(#blightSpot)"/>
+    <circle cx="40" cy="-60" r="25" fill="url(#blightSpot)"/>
+  </g>
+</svg>

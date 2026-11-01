@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%">
+  <defs>
+    <linearGradient id="sky_rice" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e0f2fe"/>
+      <stop offset="100%" stop-color="#bae6fd"/>
+    </linearGradient>
+    <linearGradient id="field_rice" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#84cc16"/>
+      <stop offset="100%" stop-color="#15803d"/>
+    </linearGradient>
+    <linearGradient id="grain_rice" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="100%" stop-color="#ca8a04"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#sky_rice)"/>
+  <circle cx="320" cy="70" r="35" fill="#fef08a" opacity="0.8"/>
+  <path d="M-20 220 Q 80 140 200 200 T 420 180 L 420 300 L -20 300 Z" fill="#86efac" opacity="0.5"/>
+  <path d="M-10 240 Q 120 190 260 230 T 420 220 L 420 300 L -10 300 Z" fill="url(#field_rice)"/>
+  <g transform="translate(180, 70)">
+    <path d="M 20 200 Q 10 120 -40 40" stroke="#166534" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M 20 200 Q 25 100 20 20" stroke="#15803d" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M 20 200 Q 35 110 80 30" stroke="#166534" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="-40" cy="40" rx="6" ry="12" fill="url(#grain_rice)" transform="rotate(-30 -40 40)"/>
+    <ellipse cx="-32" cy="55" rx="6" ry="12" fill="url(#grain_rice)" transform="rotate(-25 -32 55)"/>
+    <ellipse cx="-24" cy="72" rx="6" ry="12" fill="url(#grain_rice)" transform="rotate(-20 -24 72)"/>
+    <ellipse cx="-16" cy="90" rx="6" ry="12" fill="url(#grain_rice)" transform="rotate(-15 -16 90)"/>
+    <ellipse cx="-8" cy="110" rx="6" ry="12" fill="url(#grain_rice)" transform="rotate(-10 -8 110)"/>
+    <ellipse cx="20" cy="20" rx="6" ry="12" fill="url(#grain_rice)"/>
+    <ellipse cx="19" cy="38" rx="6" ry="12" fill="url(#grain_rice)" transform="rotate(10 19 38)"/>
+    <ellipse cx="22" cy="56" rx="6" ry="12" fill="url(#grain_rice)" transform="rotate(-8 22 56)"/>
+    <ellipse cx="19" cy="74" rx="6" ry="12" fill="url(#grain_rice)" transform="rotate(12 19 74)"/>
+    <ellipse cx="21" cy="94" rx="6" ry="12" fill="url(#grain_rice)" transform="rotate(-6 21 94)"/>
+    <ellipse cx="80" cy="30" rx="6" ry="12" fill="url(#grain_rice)" transform="rotate(35 80 30)"/>
+    <ellipse cx="70" cy="48" rx="6" ry="12" fill="url(#grain_rice)" transform="rotate(30 70 48)"/>
+    <ellipse cx="58" cy="66" rx="6" ry="12" fill="url(#grain_rice)" transform="rotate(25 58 66)"/>
+    <ellipse cx="46" cy="84" rx="6" ry="12" fill="url(#grain_rice)" transform="rotate(20 46 84)"/>
+    <ellipse cx="36" cy="104" rx="6" ry="12" fill="url(#grain_rice)" transform="rotate(15 36 104)"/>
+  </g>
+  <path d="M20 290 Q 25 240 40 230 M 70 295 Q 75 250 90 235 M 120 300 Q 130 245 150 230 M 270 295 Q 265 240 250 225 M 330 300 Q 340 255 360 240" stroke="#22c55e" stroke-width="3" stroke-linecap="round"/>
+</svg>

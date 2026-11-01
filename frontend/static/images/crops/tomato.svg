@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%">
+  <defs>
+    <linearGradient id="tomBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fee2e2"/>
+      <stop offset="100%" stop-color="#fecaca"/>
+    </linearGradient>
+    <radialGradient id="tomRed" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#f87171"/>
+      <stop offset="40%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#991b1b"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#tomBg)"/>
+  <g transform="translate(200, 160)">
+    <path d="M -150 -100 Q -60 -40 20 -30 T 160 30" stroke="#15803d" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <path d="M -80 -60 C -110 -80 -130 -60 -110 -40 C -90 -20 -80 -50 -80 -60 Z" fill="#22c55e"/>
+    <path d="M 80 -10 C 110 -40 140 -20 120 0 C 100 20 85 -5 80 -10 Z" fill="#22c55e"/>
+    <circle cx="-80" cy="20" r="42" fill="url(#tomRed)"/>
+    <ellipse cx="-95" cy="5" rx="10" ry="5" fill="#ffffff" opacity="0.4" transform="rotate(-30 -95 5)"/>
+    <path d="M -80 -22 L -84 -30 L -80 -25 L -74 -31 L -76 -23 L -68 -24 L -74 -18 Z" fill="#16a34a"/>
+    <circle cx="35" cy="35" r="75" fill="url(#tomRed)"/>
+    <ellipse cx="8" cy="5" rx="22" ry="10" fill="#ffffff" opacity="0.4" transform="rotate(-25 8 5)"/>
+    <g transform="translate(35, -40)">
+      <path d="M 0 5 L -10 -15 L 0 -5 L 10 -15 Z" fill="#166534" stroke="#14532d" stroke-width="1"/>
+      <path d="M 0 5 L -28 -2 L -5 3 L -22 18 L -3 8 L 0 25 L 3 8 L 22 18 L 5 3 L 28 -2 L 5 0 Z" fill="#15803d"/>
+      <path d="M 0 -5 Q -10 -25 -15 -35" stroke="#15803d" stroke-width="5" fill="none" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>
